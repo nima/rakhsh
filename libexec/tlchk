@@ -1,0 +1,15 @@
+#!/bin/bash
+
+o=$(tl check "$@" 2>&1)
+e=$?
+p="(warnings?|errors?):"
+
+if [ $e -ne 0 ]; then
+    echo "$o" >&2
+    exit $e
+elif echo "$o" | grep -qE "$p"; then
+    echo "$o"
+    let e=1
+fi
+
+exit $e

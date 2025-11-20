@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+export PS4='+ ${BASH_SOURCE}:${LINENO} ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+export PATH="/opt/homebrew/bin:${PATH}"
+NVIM="$(command -v nvim)"
+
+export NVIM_APPNAME=rakhsh
+CONFIG_DIR="$("$NVIM" --headless --clean --cmd 'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)"
+DATA_DIR="$(  "$NVIM" --headless --clean --cmd 'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)"
+STATE_DIR="$( "$NVIM" --headless --clean --cmd 'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)"
+CACHE_DIR="$( "$NVIM" --headless --clean --cmd 'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)"
+
+session="${STATE_DIR}/it2sid"
+socket="${STATE_DIR}/server.pipe"
+export NVIM_LISTEN_ADDRESS="${socket}"
+: ${ITERM_SESSION_ID:=headless}
+vscode="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+
+mkdir -p "$(dirname "${socket}")"
+
+function :clean() {
+  rm -f ${CACHE_DIRE}/it2sid
+  rm -f "${socket}"
+  pkill -9 -f bin/nvim
+}
+
+function :debug() {
+  printf "#%079d\n" 0 | tr '0' '#'
+  echo "Sockets:"
+  [[ ! -S "${socket}" ]] || ls -l "${socket}"
+  printf "#%079d\n" 0 | tr '0' '-'
+  echo "Processes:"
+  ps -ef|grep -wE 'n[v]r|n[v]im' || true
+  printf "#%079d\n" 0 | tr '0' '#'
+}
+
+function :vsc() {
+  return 0 # DISABLED
+  [[ -x "${vscode}" ]] || return 0
+  : open -g -a "Visual Studio Code" --args --reuse-window --goto "$(realpath "$1")"
+  :                                   code --reuse-window --goto "$(realpath "$1")"
+
+  me="$(osascript -e 'tell application "System Events" to get name of first process whose frontmost is true')"
+  osascript\
+    -e 'tell application "Visual Studio Code" to activate'\
+    -e 'tell application "System Events" to keystroke "t" using {command down, option down}'\
+  ;
+  osascript -e "tell application \"$me\" to activate"
+  return $?
+}
+
+function :socket() {
+  [[ -S "${socket}" ]] && return 0 || return 1
+}
+
+function :alive() {
+  :socket || return $?
+
+  timeout 0.2 "$NVIM" --headless --server "${socket}" --remote-expr 0 >/dev/null 2>&1 || return 2
+  return 0
+}
+
+function :healthy() {
+  :alive || return $?
+  return 0
+}
+
+function :headless() {
+  nohup "$NVIM" -V3/tmp/nvim.log --headless --listen "${socket}" </dev/null >/dev/null 2>&1 &
+  return 0
+}
+
+function :kill() {
+  local pid=$1
+  [[ -n "${pid}" ]] || return 1
+  [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
+
+  local i=0
+  local s=1
+  local -a arrows=( TERM TERM TERM KILL )
+  while kill -0 "${pid}" >/dev/null 2>&1; do
+    kill -${arrows[i]} "${pid}"
+    let i++
+    sleep $s
+    ((s*=2))
+  done
+  kill -0 "${pid}" >/dev/null 2>&1 && return 6
+  return 0
+}
+
+function :boot() {
+  :alive && :healthy && return 0
+
+  local pid
+  pid=$(:pid 2>/dev/null) && {
+    :kill "${pid}" || return $?
+  } || true
+
+  rm -f "${socket}"
+  :headless
+  :wait.block || return $?
+
+  return 0
+}
+
+function :pid() {
+  :socket || return $?
+
+  local pid
+  pid=$("$NVIM" --headless --server "${socket}" --remote-expr 'getpid()' 2>/dev/null) || return 8
+  [[ "${pid}" =~ ^[0-9]+$ ]] || return 9
+
+  echo "${pid}"
+  return 0
+}
+
+function :attach() {
+  [[ "$#" -eq 1 ]] || return 0
+  :vsc "$1"
+
+  # iTerm semantic history should pass "%1" (or similar) as one string.
+  local file ln col _
+  IFS=':' read -r file ln col _ <<< "${1-}"
+  "$NVIM" --headless --server "${socket}" --remote-tab "${file}" || return 11
+  if [[ $ln =~ ^[0-9]+$ ]]; then
+    # Explicit line (and optional column) from caller wins.
+    [[ $col =~ ^[0-9]+$ ]] || col=1
+    "$NVIM" --headless --server "${socket}" --remote-send "<Cmd>call cursor(${ln},${col})<CR>"
+  else
+    # No explicit position: jump to last cursor position (mark `"`).
+    # If it doesn't exist, `silent!` makes it a no-op.
+    : "$NVIM" --headless --server "${socket}" --remote-send "<Cmd>normal! g\`\"<CR>"
+    #"$NVIM" --headless --server "${socket}" --remote-send "<Cmd>silent! normal! g\`\"<CR>"
+  fi
+
+  return 0
+}
+
+function :session.write() {
+  [[ -t 1 ]] || return 0      # only record when attached to a TTY
+  cut -d: -f2 <<< "$ITERM_SESSION_ID" > "${session}"
+  return 0
+}
+
+function :same() {
+  [[ -f "${session}" ]] || return 0
+
+  local recorded
+  recorded=$(<"${session}") || return 13  # session file unreadable / invalid
+
+  local current
+  current=$(cut -d: -f2 <<< "$ITERM_SESSION_ID") || return 12
+
+  [[ "${current}" == "${recorded}" ]]
+  return $?
+}
+
+function :ui() {
+  local attached
+  attached=$("$NVIM" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null)
+  [[ $? -eq 0 ]] || return 14
+  (( attached == 0 )) && return 15 || return 0
+}
+
+function :ui.exec() {
+  # Require a healthy headless server before we even consider a UI.
+  :healthy || return $?
+
+  :ui
+  local ui_st=$?
+  case "${ui_st}" in
+    0)
+      # At least one UI is already attached to this server.
+      # Do not try to grab UI again; files were already attached via :attach.
+      return 0
+      ;;
+    15)
+      # No UI is currently attached: this terminal may become the UI owner.
+      [[ -t 1 ]] || return 0
+      :session.write
+      exec "$NVIM" --server "${socket}" --remote-ui
+      ;;
+    14)
+      # :ui could not query the server; fall back to legacy session-based logic.
+      ;;
+    *)
+      # Unexpected status from :ui; propagate it as an error.
+      return "${ui_st}"
+      ;;
+  esac
+
+  # Legacy fallback when we can't rely on :ui (e.g., RPC error).
+  :same
+  local st=$?
+
+  case "${st}" in
+    0)
+      [[ -t 1 ]] || return 0
+      :session.write
+      exec "$NVIM" --server "${socket}" --remote-ui
+      ;;
+    *)
+      return "${st}"
+      ;;
+  esac
+}
+
+function :wait.block() {
+  local i=0 max=40
+  while (( i < max )); do
+    :healthy && return 0
+    sleep 0.05
+    ((i++))
+  done
+  return 10
+}
+
+#! TODO: clean this shit up; use shopts and take -x|--do-x style flags
+: ${TESTING:=}
+if [[ ${TESTING} == DUMP ]]; then
+  :debug
+elif [[ ${TESTING} == CLEAN ]]; then
+  :clean
+elif [[ -n "${TESTING}" ]]; then
+  echo "theirs:$(cat $session) vs ours:$(cut -d: -f2 <<< $ITERM_SESSION_ID)"
+  set +e
+  echo "acronyms: <iec>: <inherited-error-codes>, <nec>: <native-error-codes>"
+  sleep $((0xCAFEBABE/10))&
+  sv=$!  #+ Sacrificial virgin
+  :debug
+  echo;          echo "   <test>      [<iec>] | [<nec>]:  <actual-ec>"
+  :clean
+  :socket;       echo "   socket           [] | [1]:     $?"
+  :alive;        echo "    alive          [1] | [2]:     $?"  #+ 1 from :socket
+  :healthy;      echo "  healthy          [1] | [2]:     $?"  #+ 1 from :socket, 2 from :alive
+ #:headless;     echo " headless           [] | []:      $?"
+  :ui.exec;      echo "  ui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
+  :kill ${sv};   echo "     kill           [] | [6]:     $?"
+  :boot;         echo "     boot          [6] | []:      $?"  #+ 6 from :kill
+  :pid;          echo "      pid          [1] | [8,9]:   $?"  #+ 1 from :socket
+  :attach;       echo "   attach           [] | [11]:    $?"
+  :wait.block;   echo "     wait           [] | [10]:    $?"
+  :debug
+else
+  :boot
+  :attach "$@"
+  :ui.exec  # MAY exec into UI (and writes session on first TTY)
+  exit $?
+fi

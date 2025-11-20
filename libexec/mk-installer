@@ -1,0 +1,143 @@
+#!/bin/bash
+
+export PATH="/opt/homebrew/bin:${PATH}"
+
+# Usage: ./create_sfx.sh <architecture> <package1> [package2 ...]
+# Example: ./create_sfx.sh x86_64 tree wget
+
+ARCH=$1
+shift
+PACKAGES=("$@")
+PAYLOAD_DIR="./temp_payload"
+SFX_FILE="./brew_installer_${ARCH}.run"
+
+rm -rf "$PAYLOAD_DIR"
+
+if [ -z "$ARCH" ] || [ ${#PACKAGES[@]} -eq 0 ]; then
+    echo "Usage: ./create_sfx.sh <architecture> <package1> [package2 ...]"
+    echo "Example: ./create_sfx.sh x86_64 tree wget"
+    exit 1
+fi
+
+mkdir -p "$PAYLOAD_DIR/cache"
+
+echo "--- Preparing payload for architecture: $ARCH ---"
+
+# Set the architecture prefix command
+if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+    ARCH_CMD="arch --arm64"
+elif [ "$ARCH" == "x86_64" ]; then
+    ARCH_CMD="arch --x86_64"
+else
+    echo "Unsupported architecture: $ARCH. Use 'arm64' or 'x86_64'."
+    exit 1
+fi
+
+# Function to download a package and its dependencies to a temp cache location
+download_packages() {
+    echo "Updating Homebrew metadata for architecture: $ARCH..."
+    if ! $ARCH_CMD brew update; then
+        echo "Error: brew update failed for $ARCH."
+        rm -rf "$PAYLOAD_DIR"
+        exit 1
+    fi
+
+    echo "Fetching packages (with bottles and deps): ${PACKAGES[*]}..."
+    HOMEBREW_CACHE="$PAYLOAD_DIR/cache" $ARCH_CMD brew fetch --force-bottle --deps "${PACKAGES[@]}"
+
+    if [ $? -ne 0 ]; then
+        echo "Error fetching packages for $ARCH. Ensure the package names are correct and available for this architecture."
+        rm -rf "$PAYLOAD_DIR"
+        exit 1
+    fi
+}
+
+download_packages
+
+echo "--- Creating the self-extracting executable: $SFX_FILE ---"
+
+# 1. Create the installation script stub with a marker
+INSTALL_SCRIPT_STUB="$PAYLOAD_DIR/install_stub.sh"
+cat <<EOF > "$INSTALL_SCRIPT_STUB"
+#!/bin/bash
+# Self-extracting Homebrew cache payload (prime-only)
+
+# Ensure Homebrew is on PATH on the target host.
+export PATH="/opt/homebrew/bin:/usr/local/bin:\${PATH}"
+
+# Keep Homebrew quiet / offline-ish when the stub itself calls it.
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_FROM_API=1
+export HOMEBREW_NO_ANALYTICS=1
+export HOMEBREW_NO_ENV_HINTS=1
+
+SFX_SCRIPT=\$(realpath "\$0")
+INSTALL_DIR=\$(dirname "\$SFX_SCRIPT")
+EXTRACT_DIR="\$INSTALL_DIR/extracted_payload"
+MARKER="__PAYLOAD_BELOW__"
+PAYLOAD_OFFSET_BYTES=__PAYLOAD_OFFSET__
+
+mkdir -p "\$EXTRACT_DIR"
+cd "\$EXTRACT_DIR" || exit 1
+
+echo "Extracting payload to \$EXTRACT_DIR from byte offset \$PAYLOAD_OFFSET_BYTES ..."
+if ! dd if="\$SFX_SCRIPT" bs=1 skip="\$PAYLOAD_OFFSET_BYTES" 2>/dev/null | tar -xj; then
+  echo "Extraction failed."
+  exit 1
+fi
+
+echo "Priming Homebrew cache with offline bottles..."
+
+# Determine the target Homebrew cache directory.
+TARGET_CACHE_DIR="\${HOMEBREW_CACHE:-}"
+
+if [[ -z "\$TARGET_CACHE_DIR" ]]; then
+  if command -v brew >/dev/null 2>&1; then
+    TARGET_CACHE_DIR="\$(brew --cache 2>/dev/null || true)"
+  fi
+fi
+
+# Fallback to the default macOS location if still empty.
+if [[ -z "\$TARGET_CACHE_DIR" ]]; then
+  TARGET_CACHE_DIR="\$HOME/Library/Caches/Homebrew"
+fi
+
+echo "Using Homebrew cache directory: \$TARGET_CACHE_DIR"
+mkdir -p "\$TARGET_CACHE_DIR"
+
+# Copy cached bottles into the target Homebrew cache.
+if [[ -d "\$EXTRACT_DIR/cache" ]]; then
+  cp -R "\$EXTRACT_DIR/cache/." "\$TARGET_CACHE_DIR/" || { echo "Failed to copy cache contents."; exit 1; }
+else
+  echo "No cache directory found in payload; nothing to do."
+fi
+
+echo "--- Cache priming complete. You can now run 'brew install <pkg>' offline, as long as bottles exist in the cache. ---"
+
+# Cleanup
+echo "Cleaning up temporary files..."
+rm -rf "\$EXTRACT_DIR"
+# Note: The SFX script itself is not deleted here, the user should delete it manually if desired.
+
+exit 0
+__PAYLOAD_BELOW__
+EOF
+
+# Compute the byte offset where the payload will start (size of the stub).
+STUB_SIZE=$(wc -c < "$INSTALL_SCRIPT_STUB" | tr -d ' ')
+# Replace the PAYLOAD_OFFSET_BYTES placeholder with the actual stub size.
+sed -i '' "s/__PAYLOAD_OFFSET__/$STUB_SIZE/" "$INSTALL_SCRIPT_STUB"
+
+# 2. Compress the cache directory into a tarball
+TARBALL="./payload.tar.bz2"
+tar -cjf "$TARBALL" -C "$PAYLOAD_DIR" .
+
+# 3. Combine the stub and the tarball into the final executable file
+cat "$INSTALL_SCRIPT_STUB" "$TARBALL" > "$SFX_FILE"
+chmod +x "$SFX_FILE"
+
+# Cleanup temporary directory and tarball used during creation
+rm -rf "$PAYLOAD_DIR" "$TARBALL"
+
+echo "--- Success! The self-extracting installer '$SFX_FILE' is ready. ---"
+echo "Transfer this file to the target machine and run it: ./${SFX_FILE}"

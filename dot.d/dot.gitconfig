@@ -1,0 +1,32 @@
+[core]
+	pager = less -FRX
+
+[advice]
+	detachedHead = false
+
+[alias]
+  LBase = log --oneline --graph -M90%
+  lx = LBase --pretty=format:'%C(green)%h %C(cyan)%>(30)%ad %C(yellow)%d %C(white)%s %C(reset)' --all
+  l  = LBase --pretty=format:'%C(green)%h %C(cyan)%>(30)%ad %C(yellow)%d %C(white)%s %C(magenta)%aN %C(reset)'
+  lf = l --stat
+  la = l --all
+  me = la --author='Nima Talebi'
+  cane = commit --amend --no-edit
+  amend = commit --amend --no-edit
+  changelog = log --pretty=format:'- %h %s (%an, %as)'
+  ls = !"git l $(git log --merges -n 1 --pretty=format:%H)..HEAD" --stat
+  co = checkout
+  s = status
+  f = fetch --prune 
+  b = for-each-ref --sort=-committerdate refs/heads/ --format='\
+    %(if)%(HEAD)%(then)%(color:red)H%(else)%(color:black)+%(end)%(color:reset)\
+    %(color:green)%(align:10)%(objectname:short)%(end)%(color:reset)\
+    %(color:yellow)%(align:42)%(refname:short)%(end)%(color:reset)\
+    %(color:blue)%(align:24)%(authorname)%(end)%(color:reset)\
+    %(color:cyan)%(align:16,position=right)%(committerdate:relative)%(end)%(color:reset)\
+    %(contents:subject)\
+  '
+  dt = !"f() { [ $# -eq 1 ] || { echo \"fatal: improper use of alias.\n\nusage: dt <tag>\" && return 1; }; git tag -d \"$1\"; git push origin --delete \"$1\" && git fetch --tags; }; f"
+  release = !bash src/git/fn/release
+  wd = diff --word-diff
+  #git log -pG <regex> ':(exclude)<path>'
