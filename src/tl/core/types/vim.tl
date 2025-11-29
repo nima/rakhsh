@@ -1,7 +1,11 @@
 --= Layer 0
 
-local type VimBufScope = { integer : any }
 local type VimScope    = { string  : any }
+
+local record RakhshStateBuffer
+  dirty: boolean | nil
+  position: VimCursorPosition | nil
+end
 
 local record Vim
   api: VimApi
@@ -13,7 +17,7 @@ local record Vim
   wo: VimWo
   g: VimGlobal
   opt_local: VimOptLocal
-  b: VimBufScope
+  b: {RakhshStateBuffer}
   w: VimScope
   t: VimScope
   bo: {VimBo}
@@ -74,6 +78,9 @@ local record VimFn
   bufname: function(bufnr: integer): string
   len: function({any}): integer
 end
+
+local type VimCursorPosition = { integer, integer }
+local type VimCursorPositions = { string: VimCursorPosition }
 
 local record VimApi
   nvim_list_tabpages: function(): {integer}
@@ -194,6 +201,8 @@ local record VimOptGlobal
   columns: integer
   lines: integer
   swapfile: boolean
+  shada: string
+  shadafile: string
 end
 
 local record VimLoop
@@ -307,9 +316,6 @@ local record NvimUI
   ext_popupmenu: boolean
 end
 
-local type VimCursorPosition = { integer, integer }
-local type VimCursorPositions = {string: VimCursorPosition }
-
 local record VimRawMapInfo
   lhs: string
   rhs: any
@@ -398,6 +404,7 @@ local M = {
   VimWo               = VimWo,
   AnyFunction         = AnyFunction,
   VimViewOptions      = VimViewOptions,
+  RakhshStateBuffer   = RakhshStateBuffer,
 }
 
 return M
