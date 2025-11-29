@@ -128,15 +128,22 @@ vim.api.nvim_create_autocmd(
 local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
+  -- Make sure viewdir exists so mkview/loadview can actually persist folds
+  local viewdir = vim.fn.stdpath("state") .. "/view"
+  vim.o.viewdir = viewdir
+  vim.fn.mkdir(viewdir, "p")
+
   -- Make sure folds are included in saved views
-  vim.o.viewoptions = vim.o.viewoptions .. ",folds"
+  vim.opt.viewoptions:append("folds")
 
   -- Auto-save folds (and other view info) when leaving a window
   vim.api.nvim_create_autocmd("BufWinLeave", {
     pattern = "*",
     callback = function(_ev): nil
-      -- silent! so it doesn’t complain if it can’t write
-      vim.cmd("silent! mkview")
+      if vim.bo[0].buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+        -- silent! so it doesn’t complain if it can’t write
+        vim.cmd("silent! mkview")
+      end
     end,
   })
 
@@ -144,7 +151,9 @@ function M.init(): nil
   vim.api.nvim_create_autocmd("BufWinEnter", {
     pattern = "*",
     callback = function(_ev): nil
-      vim.cmd("silent! loadview")
+      if vim.bo[0].buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+        vim.cmd("silent! loadview")
+      end
     end,
   })
 

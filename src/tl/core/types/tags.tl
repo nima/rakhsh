@@ -11,10 +11,12 @@ local record TagTable
     InputField: Tag
     --
     ActionHelp: Tag
+    ActionInfo: Tag
     ActionEdit: Tag
     ActionList: Tag
     ActionView: Tag
     ActionLaunch: Tag
+    ActionInstall: Tag
     --
     MethodFuzzy: Tag
     MethodRegex: Tag
@@ -31,7 +33,6 @@ local record TagTable
 end
 
 local Tags: TagTable = {
-    -- I want to toggle
     -- I want to search for a
     TargetFile        = { _tag = "t/file" },
     TargetBuffer      = { _tag = "t/buf" },
@@ -40,13 +41,15 @@ local Tags: TagTable = {
     SeekActive        = { _tag = "s/active" },
     --
     InputCursor: Tag  = { _tag = "i/cursor" },
-    InputField: Tag    = { _tag = "i/field" },
+    InputField: Tag   = { _tag = "i/field" },
     -- ...perform...
     ActionHelp        = { _tag = "a/help" },
+    ActionInfo        = { _tag = "a/info" },
     ActionEdit        = { _tag = "a/ed" },
     ActionList        = { _tag = "a/ls" },
     ActionView        = { _tag = "a/v" },
     ActionLaunch      = { _tag = "a/run" },
+    ActionInstall     = { _tag = "a/inst" },
     -- ...via..
     MethodFuzzy       = { _tag = "m/fz" },
     MethodRegex       = { _tag = "m/rx" },

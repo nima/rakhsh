@@ -53,7 +53,7 @@ function M.lazy(): PluginSpec
           changedelete = { text = "~" },
           untracked    = { text = "·" },
         },
-        current_line_blame = true,
+        current_line_blame = false,
         current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
         --+ position: 'eol' | 'overlay' | 'right_align'
         current_line_blame_opts = { delay = 200, virt_text_pos = 'eol' },
