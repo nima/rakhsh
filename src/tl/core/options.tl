@@ -9,6 +9,7 @@ vim.o.numberwidth = 3
 vim.o.signcolumn = "yes:2"
 vim.o.clipboard = "unnamedplus"
 vim.o.mouse = "a"
+vim.o.more = false
 
 vim.g.mapleader = " "
 
