@@ -10,6 +10,7 @@ vim.g.colorscheme = "default" -- "monokai", "elflord"
 vim.cmd("syntax on")
 
 --= 2. Core wiring (no plugin assumptions)
+require("core.notify")
 require("core.rakhsh")
 require("core.options")
 require("core.terminal")
