@@ -85,8 +85,9 @@ local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean
   return false
 end
 
-local function collisions(existing: t.vim.VimRawMapInfo|nil, mode: string, lhs: string, rhs: any): nil
+local function collisions(existing: t.vim.VimRawMapInfo, mode: string, lhs: string, rhs: any, opts: t.vim.VimMapOpts): nil
   if existing == nil then return end
+  if existing.desc == opts.desc then return end
 
   local info = existing as t.vim.VimRawMapInfo
   if info.lhs == nil then return end
@@ -150,8 +151,8 @@ end
 
 function M.safemap_buf(bufnr: integer, mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
   local lhs = mklhs(mode, role, key)
-  local existing = find_buf_map(bufnr, mode, lhs)
-  collisions(existing, mode, lhs, rhs)
+  local existing: t.vim.VimRawMapInfo = find_buf_map(bufnr, mode, lhs)
+  collisions(existing, mode, lhs, rhs, opts)
   local merged = vim.tbl_extend("force", (opts as {string : any}), { buffer = bufnr } as {string : any})
   vim.keymap.set(mode, lhs, rhs, merged as t.vim.VimMapOpts)
 end
@@ -159,7 +160,7 @@ end
 function M.safemap(mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
   local lhs = mklhs(mode, role, key)
   local existing = vim.fn.maparg(lhs, mode, false, true) as t.vim.VimRawMapInfo
-  collisions(existing, mode, lhs, rhs)
+  collisions(existing, mode, lhs, rhs, opts)
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 

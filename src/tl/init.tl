@@ -1,26 +1,22 @@
 local t = require("core.types")
 global vim: t.vim.Vim
 
--- Global theme selection (single source of truth)
-vim.g.colorscheme = "default"
---vim.g.colorscheme = "monokai"
---vim.g.colorscheme = "elflord"
-vim.cmd("syntax on")
+--= 1. Pure Core State
 vim.o.laststatus = 3
 vim.o.showmode = false
 vim.o.cmdheight = 0
 vim.o.updatetime = 500
+vim.g.colorscheme = "default" -- "monokai", "elflord"
+vim.cmd("syntax on")
 
--- Core config
+--= 2. Core wiring (no plugin assumptions)
 require("core.rakhsh")
 require("core.options")
-require("core.plugins")
 require("core.terminal")
 
--- Extras
---require("extras.init")
---require("extras.linting")
---require("extras.comments")
---require("extras.folds")
---require("extras.cursor")
---require("extras.observer")
+--= 3. Plugin Systems (penultimate)
+require("core.plugins")
+
+--= 4. Post-Plugin Systems (ultimate)
+local cursor = require("core.cursor")
+cursor.init()
