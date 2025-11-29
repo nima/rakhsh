@@ -162,7 +162,6 @@ function :attach() {
         cmd="tabedit"
       fi
     fi
-    echo "$tui,$tui_attached,$first -> $cmd"
 
     first=0
     if [[ $ln =~ ^[0-9]+$ ]]; then
