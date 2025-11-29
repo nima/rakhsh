@@ -1,4 +1,8 @@
 local t = require("core.types")
+local keymaps = require("core.keymaps")
+local R = keymaps.Roles
+local T = keymaps.Tags
+
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -24,7 +28,6 @@ local function toggle_numbers()
     vim.wo.relativenumber = false
   end
 end
-vim.keymap.set("n", "<Esc>n", toggle_numbers, { desc = "Cycle line numbers" })
 
 --- Crosshairs
 local function cycle_cursor_modes()
@@ -50,7 +53,22 @@ local function cycle_cursor_modes()
 end
 
 function M.init(): nil
-  vim.keymap.set("n", "<Esc>.", cycle_cursor_modes, { desc = "Cycle cursor crosshair modes" })
+  keymaps.safemap(
+    "n",
+    R.Toggle,
+    "n",
+    toggle_numbers,
+    keymaps.opts("Cycle line numbers", { T.TargetBuffer, T.ActionToggle })
+  )
+
+  keymaps.safemap(
+    "n",
+    R.Toggle,
+    ".",
+    cycle_cursor_modes,
+    keymaps.opts("Cycle cursor crosshair modes", { T.TargetBuffer, T.InputCursor, T.ActionToggle })
+  )
+
   vim.api.nvim_set_hl(0, "CursorLine",   { bg = "#303030" })
   vim.api.nvim_set_hl(0, "CursorColumn", { bg = "#383838" })
 end

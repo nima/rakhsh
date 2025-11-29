@@ -17,6 +17,7 @@ local record TagTable
     ActionView: Tag
     ActionLaunch: Tag
     ActionInstall: Tag
+    ActionToggle: Tag
     --
     MethodFuzzy: Tag
     MethodRegex: Tag
@@ -50,6 +51,7 @@ local Tags: TagTable = {
     ActionView        = { _tag = "a/v" },
     ActionLaunch      = { _tag = "a/run" },
     ActionInstall     = { _tag = "a/inst" },
+    ActionToggle      = { _tag = "a/toggle" },
     -- ...via..
     MethodFuzzy       = { _tag = "m/fz" },
     MethodRegex       = { _tag = "m/rx" },

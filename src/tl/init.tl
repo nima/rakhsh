@@ -1,31 +1,27 @@
-local t = require("core.types")
-local cfg = require("core.config")
-global vim: t.vim.Vim
-
---= 0. Disable legacy built-in plugins
-vim.g.loaded_matchit = 1
-vim.opt.shortmess:append("I")
-vim.opt.swapfile = false
-
---= 1. Pure Core State
-vim.o.laststatus = 3
-vim.o.showmode = false
-vim.o.cmdheight = 0
-
---= 2. User Settings
-vim.o.updatetime = 500
-vim.o.more = false
-vim.opt.wrap = false
-vim.opt.scrolloff = cfg.scrolloff
-
---= 3. Core wiring (no plugin assumptions)
 require("core.rakhsh")
 require("core.options")
-require("core.terminal")
 
---= 4. Plugin Systems (penultimate)
-require("core.plugins")
+local terminal = require("core.terminal")
+terminal.init()
 
---= 5. Post-Plugin Systems (ultimate)
 local cursor = require("core.cursor")
 cursor.init()
+
+require("core.plugins").init({
+  "plugins.lsp",        -- LSP
+  "plugins.visuals",    -- Colorschemes, special comments, syntax highlighting
+  "plugins.cmp",        -- Autocomplete
+  "plugins.telescope",  -- Telescope
+  "plugins.statusline", -- Statusline
+  "plugins.git",        -- Git
+  "plugins.illiterate", -- Syntax Highlighting
+  "plugins.tui",        -- Dialogue Windows & Panels
+  "plugins.fsh",        -- Filesyste Hierarchy
+  "plugins.llm",        -- Large Language Models (DeepSeek, etc.)
+  "plugins.md",         -- Markdown
+  "plugins.hotkeys",    -- Hotkeys (Ad-Hoc shortcuts and WhichKey cheatsheets)
+  "plugins.folds",      -- Special Comment Folds
+  "plugins.lint",       -- Lint
+  "plugins.observer",   -- Observer
+  "plugins.dialogues",  -- Pop-up dialogues
+})

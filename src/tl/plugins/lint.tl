@@ -1,6 +1,9 @@
 -- Editor-side linting helpers: trailing whitespace, etc.
 local c = require("core.config")
 local t = require("core.types")
+local keymaps = require("core.keymaps")
+local R = keymaps.Roles
+local T = keymaps.Tags
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -21,26 +24,26 @@ function M.init(): nil
       return
     end
 
-    -- ensure our highlight survives colorscheme changes
+    --+ ensure our highlight survives colorscheme changes
     vim.api.nvim_set_hl(0, "RakhshExtraWhitespace", { bg = "#991111" })
 
-    -- clear our previous trailing-whitespace match in this window, if any
+    --+ clear our previous trailing-whitespace match in this window, if any
     if trailing_ws_match_id ~= nil then
       local _ok, _ = pcall(vim.fn.matchdelete, trailing_ws_match_id)
       trailing_ws_match_id = nil
     end
 
-    -- highlight trailing whitespace at end of line and remember the match id
+    --+ highlight trailing whitespace at end of line and remember the match id
     trailing_ws_match_id = vim.fn.matchadd("RakhshExtraWhitespace", [[\s\+$]], 10, -1)
   end
 
-  -- Re-apply match when entering a window or leaving insert mode
+  --+ Re-apply match when entering a window or leaving insert mode
   vim.api.nvim_create_autocmd({ "BufWinEnter", "InsertLeave" }, {
     group = group,
     callback = enable_trailing_ws_match,
   })
 
-  -- Clear matches when leaving the window
+  --+ Clear matches when leaving the window
   vim.api.nvim_create_autocmd("BufWinLeave", {
     group = group,
     callback = function(_ev): nil
@@ -51,13 +54,10 @@ function M.init(): nil
     end,
   })
 
-  -- <leader>w: strip trailing whitespace but keep cursor position
-  vim.keymap.set("n", "<leader>w", [[mz:%s/\s\+$//e<CR>`z]], {
-    silent = true,
-    desc = "Strip trailing whitespace",
-  })
+  --+ Power move: strip trailing whitespace but keep cursor position
+  keymaps.safemap("n", R.Power, "w", [[mz:%s/\s\+$//e<CR>`z]], keymaps.opts("Strip trailing whitespace", { T.TargetBuffer, T.ActionEdit, T.BasisContent }))
 
-  -- Apply match immediately in the current window
+  --+ Apply match immediately in the current window
   enable_trailing_ws_match(nil)                         
 end
 

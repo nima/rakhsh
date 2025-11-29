@@ -6,22 +6,18 @@ local record M
 end
 
 local record BuffCounts
-  files: integer
+  buffers: integer
   terminals: integer
-  unmanaged: integer
 end
 
 local function count_buffers(): BuffCounts
-  local files, terms, unmanaged = 0, 0, 0
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    unmanaged = unmanaged + 1
-  end
-  return {files = files, terminals = terms, unmanaged = unmanaged}
+  local buffers = #vim.api.nvim_list_bufs()
+  return {buffers = buffers, terminals = 0}
 end
 
 function M.status_summary(): string
   local bc: BuffCounts = count_buffers()
-  return string.format("%d %d %d", bc.files, bc.terminals, bc.unmanaged)
+  return string.format("%d %d %d", bc.buffers, -1, -1)
 end
 
 return M
