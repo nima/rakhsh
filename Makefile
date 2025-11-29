@@ -30,7 +30,6 @@ cache = $(shell mkdir -p /tmp/rakhsh; echo "/tmp/rakhsh.$(1)")
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
 
-RAKHSH        := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
 RAKHSH_CONFIG := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
 RAKHSH_DATA   := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
 RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
@@ -206,17 +205,18 @@ iTerm2:
 .PHONY: iTerm2 iTerm2.regex
 
 $(RAKHSH_LAZY):; @bin/rx
-install: $(RAKHSH) build iTerm2 $(RAKHSH_LAZY)
+install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY)
 	$(info [$(call green,$@)])
-sync: $(RAKHSH)
-	$(info [$(call green,$@)])
-$(RAKHSH): build
+$(RAKHSH_CONFIG): build
 	@#rsync -ai --info=NAME0 --delete $</ $@/
 	@rsync -a --info=NAME0 --delete $</ $@/
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
 .PHONY: install
+
+sync: $(RAKHSH_CONFIG)
+	$(info [$(call green,$@)])
 .PHONY: sync
 
 post-validate: install
@@ -229,14 +229,13 @@ post-validate: install
 	  end;\
 	  u.validate_keymaps()" \
 	+qa
-	@#$(nvim) --headless -u $(RAKHSH)/init.lua "+quit" || exit 1
-	@#$(nvim) --headless -u $(RAKHSH)/init.lua "+checkhealth" "+qa" > /tmp/nvim.log
+	@#$(nvim) --headless -u $(RAKHSH_CONFIG)/init.lua "+quit" || exit 1
+	@#$(nvim) --headless -u $(RAKHSH_CONFIG)/init.lua "+checkhealth" "+qa" > /tmp/nvim.log
 	@#grep "ERROR" /tmp/nvim.log && exit 1 || exit 0
-	@#$(find) $(RAKHSH) -type f -name "*.lua" -print0\
+	@#$(find) $(RAKHSH_CONFIG) -type f -name "*.lua" -print0\
 		| xargs -0 -I{} $(nvim) --headless -c "luafile {}" -c "qa"\
 		|| exit 1
 .PHONY: post-validate
-
 
 purgeinstall: purge post-validate
 .PHONY: purgeinstall
@@ -249,7 +248,7 @@ ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/ra
 uninstall: clean
 	$(info [$(call black,$@)])
 	rm -f "$(ITERM2_DYN_PROF)"
-	rm -rf $(RAKHSH)
+	rm -rf $(RAKHSH_CONFIG)
 	rm -f ~/bin/rx
 .PHONY: uninstall
 
