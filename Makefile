@@ -36,6 +36,7 @@ RAKHSH_DATA   := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn
 RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
 RAKHSH_CACHE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
 RAKHSH_SOCKET := $(RAKHSH_STATE)/server.pipe
+RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
 
 brew     := $(shell command -v brew || exit 2)
 luarocks := $(shell command -v luarocks || exit 1)
@@ -63,6 +64,28 @@ define brew-install
 	  printf "$(brew_t) Installing %s...\n" "$1";\
 	  $(brew) install $1;\
 	  touch $(BREW_DIRTY);\
+	fi
+endef
+
+BREWCASK_DIRTY     := $(call cache,BREWCASK_DIRTY)
+BREWCASK_INSTALLED := $(call cache,BREWCASK_INSTALLED)
+BREWCASK_OUTDATED  := $(call cache,BREWCASK_OUTDATED)
+${BREWCASK_INSTALLED}:; @$(brew) list --cask -q > $@
+${BREWCASK_OUTDATED}:; @$(brew) outdated --cask -q > $@
+define brew-cask-install
+	@$(brew) tap $1 >/dev/null 2>&1 || true;\
+	if grep -Fqw $2 $(BREWCASK_INSTALLED) 2>/dev/null; then\
+	  if grep -Fqw $2 $(BREWCASK_OUTDATED) 2>/dev/null; then\
+	    printf "$(brew_t) Upgrading cask %s...\n" "$2";\
+	    $(brew) upgrade --cask $2;\
+	    touch $(BREWCASK_DIRTY);\
+	  else\
+	    printf "$(brew_t) cask %s...$(call good,GOOD)\n" "$2";\
+	  fi;\
+	else\
+	  printf "$(brew_t) Installing cask %s...\n" "$2";\
+	  $(brew) install --cask $2;\
+	  touch $(BREWCASK_DIRTY);\
 	fi
 endef
 
@@ -134,6 +157,7 @@ dependencies: caches installed outdated
 	@$(call brew-install,coreutils)
 	@$(call brew-install,neovim)
 	@$(call brew-install,neovim-remote)
+	@$(call brew-cask-install,homebrew/cask-fonts,font-jetbrains-mono-nerd-font)
 	@#= CLI
 	@$(call brew-install,fd)
 	@$(call brew-install,rsync)
@@ -181,7 +205,8 @@ iTerm2:
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
-install: $(RAKHSH) build iTerm2
+$(RAKHSH_LAZY):; @bin/rx
+install: $(RAKHSH) build iTerm2 $(RAKHSH_LAZY)
 	$(info [$(call green,$@)])
 sync: $(RAKHSH)
 	$(info [$(call green,$@)])
@@ -213,19 +238,22 @@ post-validate: install
 .PHONY: post-validate
 
 
-reinstall: uninstall clean post-validate
+purgeinstall: purge post-validate
+.PHONY: purgeinstall
+
+reinstall: uninstall post-validate
 .PHONY: reinstall
 
 ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
 ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
-uninstall:
+uninstall: clean
 	$(info [$(call black,$@)])
 	rm -f "$(ITERM2_DYN_PROF)"
 	rm -rf $(RAKHSH)
 	rm -f ~/bin/rx
 .PHONY: uninstall
 
-purge: clean uninstall
+purge: uninstall
 	$(info [$(call black,$@)])
 	rm -rf $(RAKHSH_DATA)
 	rm -rf $(RAKHSH_CONFIG)
@@ -274,3 +302,12 @@ killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 killsocket:
 	$(info [$(call magenta,$@)])
 	kill -9 $(pid)
+
+fonts:
+	sudo rm -rf /Library/Fonts/*Cache*
+	sudo rm -rf /System/Library/Fonts/*Cache*
+	rm -rf ~/Library/Fonts/*Cache*
+	rm -rf ~/Library/Caches/com.apple.FontServices
+	rm -rf ~/Library/Caches/com.apple.coretext*
+	sudo rm -rf /Library/Caches/com.apple.FontServices*
+	sudo rm -rf /Library/Caches/com.apple.coretext*
