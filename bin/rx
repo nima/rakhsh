@@ -154,7 +154,7 @@ function :attach() {
 
     local cmd
     if (( tui )); then
-      cmd="tabedit"
+      cmd="tab drop"
     else
       if (( first )); then
         cmd="edit"
