@@ -1,3 +1,4 @@
+local c = require("core.config")
 local t = require("core.types")
 
 global vim: t.vim.Vim
@@ -58,7 +59,7 @@ function M.lazy(): PluginSpec
       local _cfg = "nvim-treesitter.configs"
       local cfg = (require(_cfg) as TreeSitter)
       cfg.setup({
-        ensure_installed = { "c", "cpp", "python", "go", "lua", "bash" },
+        ensure_installed = c.filetypes(),
         ignore_install   = { "teal" },
         highlight        = { enable = true, additional_vim_regex_highlighting = { "teal" } },
         indent           = { enable = true },
