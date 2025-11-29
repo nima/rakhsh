@@ -253,6 +253,7 @@ local record Vim
   tbl_extend: function(behavior: string, dst: {string:any}, src: {string:any}...): {string:any}
   notify: function(msg: string, level: any | nil, opts: { string: any } | nil | nil...): any
   pesc: function(str: string): string
+  schedule: function(callback: function): nil
 end
 
 local type AnyFunction = function(...: any): any

@@ -41,7 +41,8 @@ end
 
 local cursorword_enabled: boolean = true
 local cursorword_match_id: integer | nil = nil
-local lastpos: t.vim.VimCursorPositions = {}
+local lastpos: t.vim.VimCursorPositions = load_lastpos()
+vim.g.pos = lastpos
 
 local function clear_cursorword(): nil
   if cursorword_match_id ~= nil then
@@ -69,7 +70,6 @@ local function update_cursorword(): nil
   cursorword_match_id = vim.fn.matchadd("CursorWord", pat, 10, -1)
 end
 
--- Toggle mapping: <Esc>h
 local function toggle_cursorword(): nil
   cursorword_enabled = not cursorword_enabled
   if not cursorword_enabled then
@@ -79,9 +79,34 @@ local function toggle_cursorword(): nil
   end
 end
 
-local M: t.plugins.PluginModule = {}
+local function restore_lastpos_for_buf(bufnr: integer): nil
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  if name == nil or name == "" then return end
+
+  local pos = lastpos[name]
+  if pos == nil then return end
+
+  local row = pos[1]
+  local col0 = pos[2]
+  local last_line = vim.api.nvim_buf_line_count(bufnr)
+
+  if row <= 1 or row > last_line then
+    return
+  end
+
+  pcall(vim.api.nvim_win_set_cursor, 0, { row, col0 })
+end
+
+-- Toggle mapping: <Esc>h
+local record CursorModule
+  init: function(): nil
+end
+
+local M: CursorModule = {}
 
 function M.init(): nil
+  --vim.notify("cursor.init(): installing autocmds", vim.log.levels.WARN, nil)
+
   -- Highlight group for cursor word
   vim.api.nvim_set_hl(0, "CursorWord", {
     underline = true,
@@ -99,13 +124,6 @@ function M.init(): nil
     silent = true,
     desc = "Toggle word highlight under cursor",
   })
-
-  -- Last-position table: load from disk into vim.cfg.pos once
-  if vim.g.pos == nil then
-    vim.g.pos = load_lastpos()
-  end
-
-  lastpos = vim.g.pos as t.vim.VimCursorPositions
 
   -- Save cursor position after a short idle (debounced via 'updatetime').
   vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
@@ -126,6 +144,7 @@ function M.init(): nil
       end
 
       lastpos[name] = pos
+      vim.g.pos = lastpos
       save_lastpos(lastpos)
     end,
   })
@@ -133,26 +152,18 @@ function M.init(): nil
   -- On reading a buffer, restore the last remembered position for this file, if any.
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufWinEnter" }, {
     callback = function(ev: t.vim.VimAutocmdEvent): nil
-      local name = vim.api.nvim_buf_get_name(ev.buf)
-      if name == nil or name == "" then return end
+      restore_lastpos_for_buf(ev.buf)
+    end,
+  })
 
-      -- Always reload from disk so server/headless usage sees the latest state
-      local tbl = load_lastpos()
-      lastpos = tbl
-      vim.g.pos = tbl
+    -- Fallback for first buffer when launching `nvim file`
+  vim.api.nvim_create_autocmd("VimEnter", {
+    callback = function()
+      -- only apply when user passed a file
+      if vim.fn.argc() == 0 then return end
 
-      local pos = tbl[name]
-      if pos == nil then return end
-
-      local row = pos[1]
-      local col0 = pos[2]
-      local last_line = vim.api.nvim_buf_line_count(ev.buf)
-
-      if row <= 1 or row > last_line then
-        return
-      end
-
-      pcall(vim.api.nvim_win_set_cursor, 0, { row, col0 })
+      local buf = vim.api.nvim_get_current_buf()
+      restore_lastpos_for_buf(buf)
     end,
   })
 

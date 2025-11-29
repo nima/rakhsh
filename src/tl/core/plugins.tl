@@ -1,9 +1,9 @@
 local t = require("core.types")
-local u = require("core.utils")
-global vim: t.vim.Vim
+local R = t.roles.Roles
+local T = t.tags.Tags
+local On = t.plugins.KeymapEvents
 
-local type PluginSpec = t.plugins.PluginSpec
-local type PluginModule = t.plugins.PluginModule
+local u = require("core.utils")
 
 local plugs: {string} = {
   "plugins.lsp",        -- LSP
@@ -18,12 +18,13 @@ local plugs: {string} = {
   "plugins.llm",        -- Large Language Models (DeepSeek, etc.)
   "plugins.md",         -- Markdown
   "plugins.hotkeys",    -- Hotkeys (Ad-Hoc shortcuts and WhichKey cheatsheets)
-  "plugins.cursor",     -- Cursor position
   "plugins.comments",   -- Tagged Comment
   "plugins.folds",      -- Special Comment Folds
   "plugins.lint",       -- Lint
   "plugins.observer",   -- Observer
 }
+
+local type PluginSpec = t.plugins.PluginSpec
 
 local function bare(repo: string): PluginSpec
   -- first element is the repo for lazy.nvim, extra named fields for Teal
@@ -31,26 +32,10 @@ local function bare(repo: string): PluginSpec
 end
 
 local plugins: {PluginSpec} = {
-  bare("L3MON4D3/LuaSnip"),                 -- Snippets
-  --bare("Kicamon/markdown-table-mode.nvim"), -- Markdown table management
+  bare("L3MON4D3/LuaSnip"), -- Snippets
 }
 
-for _, _mod in ipairs(plugs) do
-  local mod = (require(_mod) as PluginModule)
-  if mod.init ~= nil then mod.init() end
-
-  if mod.lazy ~= nil then
-    local spec = mod.lazy()
-    plugins[#plugins + 1] = spec
-  end
-
-  --TODO: move to mod.setup()
-  u.apply_plugin_keymaps(_mod)
-end
-
-local record Lazy
-  setup: function({PluginSpec}, {string:any} | nil): any
-end
+global vim: t.vim.Vim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
 local function setup_lazy(missing_install: boolean): boolean
@@ -61,6 +46,9 @@ local function setup_lazy(missing_install: boolean): boolean
   vim.opt.rtp:prepend(lazypath)
 
   local modstr = "lazy"
+  local record Lazy
+    setup: function({PluginSpec}, {string:any} | nil): any
+  end
   local lazy = (require(modstr) as Lazy)
   lazy.setup(plugins, {
     install = { missing = missing_install },
@@ -76,10 +64,20 @@ local function setup_lazy(missing_install: boolean): boolean
   return true
 end
 
-global function RakhshLazyInstall()
+local function RakhshLazyInstall(): nil
   if not (vim.loop and vim.loop.fs_stat and vim.loop.fs_stat(lazypath)) then
     vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", lazypath })
   end
+
+  vim.api.nvim_create_autocmd("User", {
+    once = true,
+    pattern = { "LazyInstall", "LazySync", "LazyDone" },
+    callback = function(_ev)
+      vim.schedule(function()
+        vim.cmd("qa")
+      end)
+    end,
+  })
 
   if not setup_lazy(true) then
     vim.notify("rakhsh: lazy.nvim install failed", vim.log.levels.ERROR, nil)
@@ -87,9 +85,48 @@ global function RakhshLazyInstall()
   end
 end
 
-if not setup_lazy(false) then
-  vim.notify("rakhsh: plugins are not installed yet. Press <leader>Li to install with Lazy.", vim.log.levels.INFO, nil)
+local record CorePluginsModule
+  init: function(): nil
+  install: function(): nil
 end
 
---! Need a better way than this
-vim.keymap.set("n", "<leader>Li", RakhshLazyInstall, { silent = true }) --TODO
+local M: CorePluginsModule = {} as CorePluginsModule
+M.install = RakhshLazyInstall
+
+local initialized = false
+local function ensure_initialized(): nil
+  if initialized then return end
+  local type PluginModule = t.plugins.PluginModule
+  for _, _mod in ipairs(plugs) do
+    local mod = (require(_mod) as PluginModule)
+    if mod.init ~= nil then mod.init() end
+    if mod.lazy ~= nil then
+      local spec = mod.lazy()
+      plugins[#plugins + 1] = spec
+    end
+    -- TODO: move to mod.setup()
+    u.apply_plugin_keymaps(_mod)
+  end
+  initialized = true
+end
+
+function M.init(): nil
+  u.install_keymap("core.plugins", {
+    mode = "n", role = R.Toggle, key = "I", rhs = M.install,
+    desc = "Install Rakhsh IDE", tags = { T.ActionLaunch }, on = On.Immediate
+  })
+  ensure_initialized()
+end
+
+vim.api.nvim_create_autocmd("UIEnter", {
+  once = true,
+  callback = function()
+    ensure_initialized()
+    if setup_lazy(false) then
+      return
+    end
+    RakhshLazyInstall()
+  end,
+})
+
+return M
