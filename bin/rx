@@ -151,6 +151,9 @@ function :attach() {
   local first=1
   for token in "${tokens[@]}"; do
     IFS=':' read -r file ln col _ <<< "${token}"
+    if [[ -n "${file}" && -e "${file}" ]]; then
+      file="$(realpath -- "${file}")"
+    fi
 
     local cmd
     if (( tui )); then
