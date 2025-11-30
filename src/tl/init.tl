@@ -1,21 +1,26 @@
 local t = require("core.types")
+local cfg = require("core.config")
 global vim: t.vim.Vim
 
 --= 1. Pure Core State
 vim.o.laststatus = 3
 vim.o.showmode = false
 vim.o.cmdheight = 0
+
+--= 2. User Settings
 vim.o.updatetime = 500
 vim.o.more = false
+vim.opt.wrap = false
+vim.opt.scrolloff = cfg.scrolloff
 
---= 2. Core wiring (no plugin assumptions)
+--= 3. Core wiring (no plugin assumptions)
 require("core.rakhsh")
 require("core.options")
 require("core.terminal")
 
---= 3. Plugin Systems (penultimate)
+--= 4. Plugin Systems (penultimate)
 require("core.plugins")
 
---= 4. Post-Plugin Systems (ultimate)
+--= 5. Post-Plugin Systems (ultimate)
 local cursor = require("core.cursor")
 cursor.init()
