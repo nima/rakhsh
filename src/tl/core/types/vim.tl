@@ -233,8 +233,21 @@ local record VimLogLevels
   ERROR: integer
 end
 
+local record VimTreesitterLanguage
+  register: function(lang: string, ft: string): nil
+end
+
 local record VimLog
   levels: VimLogLevels
+end
+
+local record VimTreesitter
+  get_parser: function(bufnr: integer, lang: string | nil, opts: any | nil): any
+  language: VimTreesitterLanguage
+end
+
+local record VimEnv
+  OPENAI_API_KEY: string | nil
 end
 
 local record Vim
@@ -251,12 +264,18 @@ local record Vim
   cmd: VimCmd
   lsp: VimLSP
   log: VimLog
+  env: VimEnv
   diagnostic: VimDiagnostic
   tbl_extend: function(behavior: string, dst: {string:any}, src: {string:any}...): {string:any}
   notify: function(msg: string, level: any | nil, opts: { string: any } | nil | nil...): any
   pesc: function(str: string): string
   schedule: function(callback: function): nil
   defer_fn: function(callback: function, delay: integer): nil
+  treesitter: VimTreesitter
+end
+
+local record VimNotify
+  notify: function(msg: string, level: integer | nil, opts: any): nil
 end
 
 local type AnyFunction = function(...: any): any
@@ -281,6 +300,8 @@ local M = {
   VimAutocmdOpts      = VimAutocmdOpts,
   VimApi              = VimApi,
   Vim                 = Vim,
+  VimNotify           = VimNotify,
+  VimEnv              = VimEnv,
   VimLog              = VimLog,
   VimRawMapInfo       = VimRawMapInfo,
   VimLSPClientFilter  = VimLSPClientFilter,
