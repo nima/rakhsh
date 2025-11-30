@@ -72,6 +72,7 @@ local record VimOptGlobal
   updatetime: integer
   viewoptions: string
   viewdir: string
+  more: boolean
 end
 
 local record VimLoop
