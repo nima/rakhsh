@@ -71,6 +71,7 @@ local record VimOptGlobal
   cmdheight: integer
   updatetime: integer
   viewoptions: string
+  viewdir: string
 end
 
 local record VimLoop
@@ -81,28 +82,33 @@ local record VimOptRuntimeRtp
   prepend: function(self: any, path: string): nil
 end
 
+local record VimViewOptions
+  append: function(self: VimViewOptions, value: string): nil
+end
+
 local record VimOptRuntime
   rtp: VimOptRuntimeRtp
   modeline: boolean
   modelines: integer
   modelineexpr: boolean
+  viewoptions: VimViewOptions
 end
 
-local record VimBoBuf
+local record VimBo
+  filetype: string
+  bufnr: integer
+  buftype: string
   bufhidden: string
-  modifiable: boolean
+  commentstring: string
+  bufmodified: boolean
   expandtab: boolean
   shiftwidth: integer
   tabstop: integer
   softtabstop: integer
+  modifiable: boolean
   cindent: boolean
   cinoptions: string
-  commentstring: string | nil
-  filetype: string
-  buftype: string
 end
-
-local type VimBo = { integer: VimBoBuf }
 
 local type VimCallback = function(ev: {string:any} | nil)
 
@@ -260,7 +266,7 @@ local record Vim
   wo: VimWo
   g: VimGlobal
   opt_local: VimOptLocal
-  bo: VimBo
+  bo: {VimBo}
   cmd: VimCmd
   lsp: VimLSP
   log: VimLog
