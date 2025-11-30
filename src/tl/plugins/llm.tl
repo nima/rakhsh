@@ -1,5 +1,6 @@
 local t = require("core.types")
 local u = require("core.utils")
+local n = require("core.notify")
 local On = t.plugins.KeymapEvents
 local R = u.Roles
 local T = u.Tags
@@ -82,11 +83,17 @@ function M.lazy(): PluginSpec
       "nvim-telescope/telescope.nvim",
     },
     config = function()
-      local mod = "chatgpt"
-      local ok: boolean = pcall(require, mod)
+      local key: string | nil = vim.env.OPENAI_API_KEY
+      if key == nil or key == "" then
+        n.notify("[llm] ChatGPT.nvim disabled: OPENAI_API_KEY is not set", vim.log.levels.WARN, { timeout = 4000 })
+        return
+      end
+
+      local _mod = "chatgpt"
+      local ok: boolean = pcall(require, _mod)
       if not ok then return end
 
-      local chatgpt = (require(mod) as ChatGPT)
+      local chatgpt = (require(_mod) as ChatGPT)
       chatgpt.setup({ openai_params = { model = "gpt-5.1-mini", }, })
     end,
   } as PluginSpec
