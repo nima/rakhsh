@@ -7,7 +7,7 @@ local u = require("core.utils")
 
 local plugs: {string} = {
   "plugins.lsp",        -- LSP
-  "plugins.themes",     -- Themes
+  "plugins.visuals",    -- Colorschemes, special comments, syntax highlighting
   "plugins.cmp",        -- Autocomplete
   "plugins.telescope",  -- Telescope
   "plugins.statusline", -- Statusline
@@ -18,7 +18,6 @@ local plugs: {string} = {
   "plugins.llm",        -- Large Language Models (DeepSeek, etc.)
   "plugins.md",         -- Markdown
   "plugins.hotkeys",    -- Hotkeys (Ad-Hoc shortcuts and WhichKey cheatsheets)
-  "plugins.comments",   -- Tagged Comment
   "plugins.folds",      -- Special Comment Folds
   "plugins.lint",       -- Lint
   "plugins.observer",   -- Observer

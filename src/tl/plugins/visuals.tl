@@ -1,5 +1,23 @@
 local t = require("core.types")
+local cfg = require("core.config")
+
 global vim: t.vim.Vim
+
+local record ColorizerOpts
+  RGB: boolean
+  RRGGBB: boolean
+  names: boolean
+  rgb_fn: boolean
+  hsl_fn: boolean
+  css: boolean
+  css_fn: boolean
+  mode: string
+end
+
+local record Colorizer
+  setup: function({string}, ColorizerOpts): nil
+end
+
 local ns = vim.api.nvim_create_namespace("RakhshCommentTagsNS")
 local group = vim.api.nvim_create_augroup("RakhshCommentTags", { clear = true })
 local tag_groups = {
@@ -36,10 +54,15 @@ local function redefine_comment_tag_highlights(): nil
   hi("CommentTagDeprecation",  { fg = "#FF3333", strikethrough = true })
 end
 
+local function ensure_comment_tag_highlights(): nil
+  redefine_comment_tag_highlights()
+end
+
 local function apply_comment_tag_extmarks(bufnr: integer)
 
   local resolved = bufnr
   vim.api.nvim_buf_clear_namespace(resolved, ns, 0, -1)
+  ensure_comment_tag_highlights()
 
   local cs = (vim.bo[resolved].commentstring or "") as string
   if cs == "" or not cs:find("%%s") then return end
@@ -108,6 +131,8 @@ end
 local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
+  vim.g.colorscheme = cfg.colorschema
+
   vim.api.nvim_create_autocmd({"VimEnter", "BufWinEnter", "BufWritePost", "TextChanged", "TextChangedI"}, {
     group = group,
     callback = function(ev): nil
@@ -115,14 +140,59 @@ function M.init(): nil
       apply_comment_tag_extmarks(vim.api.nvim_get_current_buf())
     end,
   })
+
   vim.api.nvim_create_autocmd("ColorScheme", {
     group = group,
     callback = function(ev): nil
       local _ = ev -- ignore; we only need to re-define our groups
-      redefine_comment_tag_highlights()
+      ensure_comment_tag_highlights()
     end,
   })
+
+  vim.cmd("syntax on")
+
   redefine_comment_tag_highlights()
+end
+
+function M.lazy() : t.plugins.PluginSpec
+  return {
+    "tanvirtin/monokai.nvim",
+    priority = 1000,
+    lazy = true,
+    keymaps = {},
+    event = { "VimEnter" },
+    dependencies = {
+      "catppuccin/nvim",
+      "folke/tokyonight.nvim",
+      "EdenEast/nightfox.nvim",
+      "rebelot/kanagawa.nvim",
+      "rose-pine/neovim",
+      {
+        "norcalli/nvim-colorizer.lua",
+        config = function()
+          --[[
+          local theme = cfg.colorschema
+          local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
+          if not ok then
+            vim.notify("colorscheme: '" .. theme .. "' not found (install theme plugin and restart)", vim.log.levels.ERROR, nil)
+          end
+          ]]--
+          local _ = "colorizer"
+          local mod = (require(_) as Colorizer)
+          mod.setup({ "*" }, {
+            RGB    = true,
+            RRGGBB = true,
+            names  = false,
+            rgb_fn = false,
+            hsl_fn = false,
+            css    = false,
+            css_fn = false,
+            mode   = "background",
+          })
+        end
+      }
+    },
+  } as t.plugins.PluginSpec
 end
 
 return M

@@ -6,8 +6,7 @@ vim.o.laststatus = 3
 vim.o.showmode = false
 vim.o.cmdheight = 0
 vim.o.updatetime = 500
-vim.g.colorscheme = "default" -- "monokai", "elflord"
-vim.cmd("syntax on")
+vim.o.more = false
 
 --= 2. Core wiring (no plugin assumptions)
 require("core.rakhsh")
