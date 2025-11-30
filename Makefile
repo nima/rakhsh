@@ -25,10 +25,10 @@ luarocks_t = $(shell echo "[$(CYAN)LuaRocks$(ENDC)]")
 brew_t     = $(shell echo "[$(YELLOW)Brew$(ENDC)]")
 npm_t      = $(shell echo "[$(GREEN)NPM$(ENDC)]")
 
-cache = $(shell mkdir -p /tmp/rakhsh; echo "/tmp/rakhsh.$(1)")
-
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
+
+cache = $(shell mkdir -p /tmp/$(NVIM_APPNAME); echo "/tmp/rakhsh.$(1)")
 
 ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
 ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
@@ -73,8 +73,8 @@ endef
 BREWCASK_DIRTY     := $(call cache,BREWCASK_DIRTY)
 BREWCASK_INSTALLED := $(call cache,BREWCASK_INSTALLED)
 BREWCASK_OUTDATED  := $(call cache,BREWCASK_OUTDATED)
-${BREWCASK_INSTALLED}:; @$(brew) list --cask -q > $@
-${BREWCASK_OUTDATED}:; @$(brew) outdated --cask -q > $@
+${BREWCASK_INSTALLED}:; @$(brew) list --casks > $@
+${BREWCASK_OUTDATED}:; @$(brew) outdated --cask > $@
 define brew-cask-install
 	@$(brew) tap $1 >/dev/null 2>&1 || true;\
 	if grep -Fqw $2 $(BREWCASK_INSTALLED) 2>/dev/null; then\
@@ -134,10 +134,10 @@ define npm-install
 	fi
 endef
 
-installed: $(BREW_INSTALLED) $(LUAROCKS_INSTALLED) $(NPM_INSTALLED)
+installed: $(BREW_INSTALLED) $(BREWCASK_INSTALLED) $(LUAROCKS_INSTALLED) $(NPM_INSTALLED)
 .PHONY: installed
 
-outdated: $(BREW_OUTDATED) $(LUAROCKS_OUTDATED) $(NPM_OUTDATED)
+outdated: $(BREW_OUTDATED) $(BREWCASK_INSTALLED) $(LUAROCKS_OUTDATED) $(NPM_OUTDATED)
 .PHONY: outdated
 
 upgrade: dependencies
@@ -150,7 +150,6 @@ post-install-cleanup = [ ! -e "$($(1)_DIRTY)" ] || rm -f "$($(1)_DIRTY)" "$($(1)
 caches: /opt/homebrew/.git/HEAD
 /tmp/.nonce: /opt/homebrew/.git/HEAD
 	@$(call post-install-cleanup,BREW)
-
 	@touch -r /opt/homebrew/.git/HEAD $@
 /opt/homebrew/.git/HEAD:
 .PHONY: caches
@@ -184,6 +183,7 @@ dependencies: caches installed outdated
 	@#= Markdown
 	@$(call brew-install,marksman)                #+ Python LSP
 	@#= Internal
+	@$(call post-install-cleanup,BREWCASK)
 	@$(call post-install-cleanup,BREW)
 	@$(call post-install-cleanup,LUAROCKS)
 	@$(call post-install-cleanup,NPM)
