@@ -3,7 +3,6 @@ set -uo pipefail
 
 export TERM='xterm-256color'
 export PS4='+ ${BASH_SOURCE}:${LINENO} ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-export PATH="/opt/homebrew/bin:${PATH}"
 NVIM="$(command -v nvim)"
 
 export NVIM_APPNAME=rakhsh

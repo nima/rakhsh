@@ -30,12 +30,16 @@ cache = $(shell mkdir -p /tmp/rakhsh; echo "/tmp/rakhsh.$(1)")
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
 
+ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
+ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
+
 RAKHSH_CONFIG := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
 RAKHSH_DATA   := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
 RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
 RAKHSH_CACHE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
 RAKHSH_SOCKET := $(RAKHSH_STATE)/server.pipe
 RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
+RAKHSH_ZSHRC  := $(PWD)/dot.d/dot.zshrc
 
 brew     := $(shell command -v brew || exit 2)
 luarocks := $(shell command -v luarocks || exit 1)
@@ -204,9 +208,13 @@ iTerm2:
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
+link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
+.PHONY: link
+
 $(RAKHSH_LAZY):; @bin/rx
-install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY)
+install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link
 	$(info [$(call green,$@)])
+
 $(RAKHSH_CONFIG): build
 	@#rsync -ai --info=NAME0 --delete $</ $@/
 	@rsync -a --info=NAME0 --delete $</ $@/
@@ -215,7 +223,7 @@ $(RAKHSH_CONFIG): build
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
 .PHONY: install
 
-sync: $(RAKHSH_CONFIG)
+sync: $(RAKHSH_CONFIG) link
 	$(info [$(call green,$@)])
 .PHONY: sync
 
@@ -243,9 +251,10 @@ purgeinstall: purge post-validate
 reinstall: uninstall post-validate
 .PHONY: reinstall
 
-ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
-ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
-uninstall: clean
+unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
+.PHONY: unlink
+
+uninstall: clean unlink
 	$(info [$(call black,$@)])
 	rm -f "$(ITERM2_DYN_PROF)"
 	rm -rf $(RAKHSH_CONFIG)
