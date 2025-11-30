@@ -6,7 +6,7 @@ import os
 # Fixed GUID so we can safely find/update the same profile every time.
 PROFILE_GUID = "8B6A6C58-7E18-4A32-B4C1-5F8A3A9E7F01"
 PROFILE_NAME = "Rakhsh"
-NERD_FONT = "Hurmit Nerd Font Mono 13"
+NERD_FONT = "0xProtoNFP-Regular 20"
 
 def regex() -> str:
     #@ https://regex101.com/r/NSIXLe/1
@@ -21,10 +21,38 @@ def main():
 
         ~/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
 
-    so that iTerm2 sees a "Rakhsh" profile with:
+    That iTerm2 sees a "Rakhsh" profile with:
 
         - a Smart Selection rule for file:line[:col]
         - Semantic History configured to run `rx --iterm \5 \1`.
+
+    Sample product @ "$HOME/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json":
+        ```json
+        {
+          "Profiles" : [
+            {
+              "Smart Selection Rules" : [
+                {
+                  "notes" : "Rakhsh: code file with optional :line:col",
+                  "regex" : "...",
+                  "precision" : "very_high"
+                }
+              ],
+              "Use Non-ASCII Font" : true,
+              "Non Ascii Font" : "Menlo-Regular 11",
+              "Normal Font" : "0xProtoNFP-Regular 11",
+              "Rewritable" : false,
+              "Semantic History" : {
+                "action" : "command",
+                "text" : "/opt/github/rakhsh/bin/rx --iterm \\5 \\1"
+              },
+              "Guid" : "8B6A6C58-7E18-4A32-B4C1-5F8A3A9E7F01",
+              "Name" : "Rakhsh",
+              "Use Separate Colors for Light and Dark Mode" : true
+            }
+          ]
+        }
+        ```
     """
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -47,6 +75,7 @@ def main():
             "action": "command",
             "text": f"{rakhsh} --iterm \\5 \\1",
         },
+        "Use Separate Colors for Light and Dark Mode" : True,
     }
     data = {"Profiles": [profile]}
 
