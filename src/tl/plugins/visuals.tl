@@ -158,9 +158,15 @@ function M.lazy() : t.plugins.PluginSpec
   return {
     "tanvirtin/monokai.nvim",
     priority = 1000,
-    lazy = true,
+    lazy = false,
     keymaps = {},
     event = { "VimEnter" },
+    config = function()
+      local theme = cfg.colorschema
+      local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
+      if ok then return end
+      vim.notify("colorscheme: '" .. theme .. "' not found (install theme plugin and restart)", vim.log.levels.ERROR, nil)
+    end,
     dependencies = {
       "catppuccin/nvim",
       "folke/tokyonight.nvim",
@@ -169,16 +175,10 @@ function M.lazy() : t.plugins.PluginSpec
       "rose-pine/neovim",
       {
         "norcalli/nvim-colorizer.lua",
+        lazy = false,
         config = function()
-          --[[
-          local theme = cfg.colorschema
-          local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
-          if not ok then
-            vim.notify("colorscheme: '" .. theme .. "' not found (install theme plugin and restart)", vim.log.levels.ERROR, nil)
-          end
-          ]]--
-          local _ = "colorizer"
-          local mod = (require(_) as Colorizer)
+          local _mod = "colorizer"
+          local mod = (require(_mod) as Colorizer)
           mod.setup({ "*" }, {
             RGB    = true,
             RRGGBB = true,

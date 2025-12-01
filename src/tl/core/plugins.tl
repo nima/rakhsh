@@ -54,11 +54,13 @@ local function setup_lazy(missing_install: boolean): boolean
     checker = { enabled = false },
   })
 
+  --[[
   local theme = vim.g.colorscheme as string
   local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
   if not ok then
     vim.notify("rakhsh[colorcheme]: '" .. theme .. "' not found (install themes and restart)", vim.log.levels.WARN, nil)
   end
+  ]]--
 
   return true
 end

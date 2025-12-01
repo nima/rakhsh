@@ -18,7 +18,7 @@ end
 local M = {
   languages = languages,
   filetypes = filetypes,
-  colorschema = "default", -- "monokai", "elflord"
+  colorschema = "monokai", -- "default", "elflord"
   scrolloff = 5,
 }
 
