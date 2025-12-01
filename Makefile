@@ -208,7 +208,7 @@ iTerm2:
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
-link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zshrc
+link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
 .PHONY: link
 
 $(RAKHSH_LAZY):; @bin/rx
@@ -233,7 +233,7 @@ purgeinstall: purge install
 reinstall: uninstall
 .PHONY: reinstall
 
-unlink:; rm -f ~/.zshrc.d/rakhsh.zshrc
+unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
 .PHONY: unlink
 
 uninstall: clean unlink
