@@ -89,9 +89,6 @@ local record CorePluginsModule
   install: function(): nil
 end
 
-local M: CorePluginsModule = {} as CorePluginsModule
-M.install = RakhshLazyInstall
-
 local initialized = false
 local function ensure_initialized(): nil
   if initialized then return end
@@ -109,14 +106,6 @@ local function ensure_initialized(): nil
   initialized = true
 end
 
-function M.init(): nil
-  u.install_keymap("core.plugins", {
-    mode = "n", role = R.Toggle, key = "I", rhs = M.install,
-    desc = "Install Rakhsh IDE", tags = { T.ActionLaunch }, on = On.Immediate
-  })
-  ensure_initialized()
-end
-
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
@@ -127,5 +116,15 @@ vim.api.nvim_create_autocmd("UIEnter", {
     RakhshLazyInstall()
   end,
 })
+
+local M: CorePluginsModule = {} as CorePluginsModule
+M.install = RakhshLazyInstall
+function M.init(): nil
+  u.install_keymap("core.plugins", {
+    mode = "n", role = R.Toggle, key = "I", rhs = M.install,
+    desc = "Install Rakhsh IDE", tags = { T.ActionLaunch }, on = On.Immediate
+  })
+  ensure_initialized()
+end
 
 return M

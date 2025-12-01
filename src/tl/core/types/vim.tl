@@ -75,6 +75,27 @@ local record VimApi
   nvim_get_current_buf: function(): integer
 end
 
+local record VimBo
+  filetype: string
+  bufnr: integer
+  buftype: string
+  bufhidden: string
+  commentstring: string
+  bufmodified: boolean
+  expandtab: boolean
+  shiftwidth: integer
+  tabstop: integer
+  softtabstop: integer
+  modifiable: boolean
+  cindent: boolean
+  cinoptions: string
+end
+
+local record VimTreesitter
+  get_parser: function(bufnr: integer, lang: string | nil, opts: any | nil): any
+  language: VimTreesitterLanguage
+end
+
 local record VimKeymap
   set: function(mode: string | {string}, lhs: string, rhs: any, opts: VimMapOpts): nil
   get: function(mode: string | {string}, lhs: string, opts: any | nil): { VimRawMapInfo }
@@ -147,22 +168,6 @@ local record VimOptRuntime
   viewoptions: VimViewOptions
   scrolloff: integer
   wrap: boolean
-end
-
-local record VimBo
-  filetype: string
-  bufnr: integer
-  buftype: string
-  bufhidden: string
-  commentstring: string
-  bufmodified: boolean
-  expandtab: boolean
-  shiftwidth: integer
-  tabstop: integer
-  softtabstop: integer
-  modifiable: boolean
-  cindent: boolean
-  cinoptions: string
 end
 
 local type VimCallback = function(ev: {string:any} | nil)
@@ -275,15 +280,11 @@ end
 
 local record VimTreesitterLanguage
   register: function(lang: string, ft: string): nil
+  get_lang: function(ft: string): string
 end
 
 local record VimLog
   levels: VimLogLevels
-end
-
-local record VimTreesitter
-  get_parser: function(bufnr: integer, lang: string | nil, opts: any | nil): any
-  language: VimTreesitterLanguage
 end
 
 local record VimEnv
