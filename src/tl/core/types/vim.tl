@@ -289,6 +289,7 @@ local record VimGlobal
   colorscheme: string | nil
   string: any
   pos: VimCursorPositions
+  loaded_matchit: integer | nil
 end
 
 local record VimLogLevels
