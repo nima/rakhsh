@@ -128,10 +128,120 @@ local function apply_comment_tag_extmarks(bufnr: integer)
   end
 end
 
+local function read_splash_lines(): {string}
+  -- Try to read a custom splash file from the data directory.
+  -- If missing or empty, fall back to the built-in default.
+  local default = {
+    "_____            _      _     ",
+    "|  __ \\          | |    | |    ",
+    "| |__) |__ _  ___| | __ | |__  ",
+    "|  _  // _` |/ __| |/ / | '_ \\",
+    "| | \\ \\ (_| | (__|   <  | | | |",
+    "|_|  \\_\\__,_|\\___|_|\\_\\ |_| |_|",
+    "",
+    "Rakhsh · Neovim IDE",
+    "q to quit, :e file.tl to start editing",
+  }
+
+  local ok, datadir = pcall(vim.fn.stdpath, "data")
+  if not ok or type(datadir) ~= "string" or datadir == "" then
+    return default
+  end
+
+  local path = datadir .. "/splash.txt"
+  local fh = io.open(path, "r")
+  if not fh then
+    return default
+  end
+
+  local lines = {} as {string}
+  for line in fh:lines() do
+    table.insert(lines, line)
+  end
+  fh:close()
+
+  if #lines == 0 then
+    return default
+  end
+
+  return lines
+end
+
+local function show_rakhsh_splash(): nil
+  local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
+
+  vim.bo[buf].buftype    = "nofile"
+  vim.bo[buf].bufhidden  = "wipe"
+  vim.bo[buf].swapfile   = false
+  vim.bo[buf].modifiable = true
+  vim.bo[buf].filetype   = "rakhsh-splash"
+
+  vim.wo.number         = false
+  vim.wo.relativenumber = false
+  vim.wo.signcolumn     = "no"
+  vim.wo.foldcolumn     = "0"
+  vim.wo.list           = false
+  vim.wo.cursorline     = false
+
+  local lines = read_splash_lines()
+
+  local width  = vim.api.nvim_win_get_width(win)
+  local height = vim.api.nvim_win_get_height(win)
+
+  local padded = {} as {string}
+
+  -- vertical centering: prepend empty lines
+  local top_pad = 0
+  if height > #lines then
+    top_pad = math.floor((height - #lines) / 2)
+  end
+  for _ = 1, top_pad do
+    table.insert(padded, "")
+  end
+
+  -- horizontal centering for each line
+  for _, l in ipairs(lines) do
+    local pad = 0
+    if #l < width then
+      pad = math.floor((width - #l) / 2)
+    end
+    table.insert(padded, string.rep(" ", pad) .. l)
+  end
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
+
+  vim.bo[buf].modified = false
+
+  vim.api.nvim_create_autocmd("InsertEnter", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      if not vim.api.nvim_buf_is_valid(buf) then
+        return
+      end
+      -- turn this into a normal empty buffer and let the user start typing
+      vim.bo[buf].buftype   = ""
+      vim.bo[buf].bufhidden = ""
+      vim.bo[buf].swapfile  = true
+      vim.bo[buf].filetype  = ""
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "" })
+      vim.bo[buf].modified = false
+    end,
+  })
+
+  vim.keymap.set("n", "q", "<cmd>bd!<CR>", { buffer = buf, nowait = true, silent = true })
+end
+
 local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
   vim.g.colorscheme = cfg.colorschema
+
+  -- Rakhsh startup splash (only when no files are passed)
+  if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" then
+    show_rakhsh_splash()
+  end
 
   vim.api.nvim_create_autocmd({"VimEnter", "BufWinEnter", "BufWritePost", "TextChanged", "TextChangedI"}, {
     group = group,

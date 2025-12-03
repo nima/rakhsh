@@ -91,6 +91,11 @@ local record VimApi
   nvim_open_win: function(bufnr: integer, enter: boolean, opts: {string:any}): integer
   nvim_win_close: function(win: integer, force: boolean): nil
   nvim_win_is_valid: function(win: integer): boolean
+  nvim_create_user_command: function(name: string, command: VimCallback | string, opts: {string:any}): nil
+  nvim_buf_is_valid: function(bufnr: integer): boolean
+  nvim_get_current_win: function(): integer
+  nvim_win_get_width: function(win: integer): integer
+  nvim_win_get_height: function(win: integer): integer
 end
 
 local record VimBo
@@ -107,6 +112,8 @@ local record VimBo
   modifiable: boolean
   cindent: boolean
   cinoptions: string
+  modified: boolean
+  swapfile: boolean
 end
 
 local record VimTreesitter
@@ -189,6 +196,7 @@ local record VimOptRuntime
   viewoptions: VimViewOptions
   scrolloff: integer
   wrap: boolean
+  shortmess: VimOptionList
 end
 
 local type VimCallback = function(ev: {string:any} | nil)
@@ -282,6 +290,9 @@ local record VimWo
   cursorline: boolean
   cursorcolumn: boolean
   foldmethod: string
+  signcolumn: string
+  foldcolumn: string
+  list: boolean
 end
 
 local record VimGlobal

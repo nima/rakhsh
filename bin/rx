@@ -223,6 +223,10 @@ function :tui.exec() {
   esac
 }
 
+function :e(){ keyhex=($(echo -n "$1" | xxd -p -c1)); i=0; xxd -p -c1 | while read -r b; do k=${keyhex[$((i%${#keyhex[@]}))]}; printf "%02x\n" $((0x$b ^ 0x$k)); ((i++)); done | xxd -r -p | base64; }
+
+function :d(){ keyhex=($(echo -n "$1" | xxd -p -c1)); i=0; base64 -d | xxd -p -c1 | while read -r b; do k=${keyhex[$((i%${#keyhex[@]}))]}; printf "%02x\n" $((0x$b ^ 0x$k)); ((i++)); done | xxd -r -p; }
+
 function :wait.block() {
   local i=0 max=40
   while (( i < max )); do
@@ -273,7 +277,7 @@ else
   else
     #+ Mode: CLI
     let clicked=0
-    :attach ${clicked} "${@}"
+    :attach ${clicked} "$@"
     :tui.exec  # MAY exec into UI (and writes session on first TTY)
   fi
   exit $?
