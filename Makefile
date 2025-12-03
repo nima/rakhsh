@@ -9,6 +9,8 @@ MAGENTA := \033[1;35m
 CYAN    := \033[1;36m
 ENDC    := \033[0m
 
+SHELL    := $(shell command -v bash)
+
 black   = $(shell echo "$(BLACK)$(1)$(ENDC)")
 red     = $(shell echo "$(RED)$(1)$(ENDC)")
 green   = $(shell echo "$(GREEN)$(1)$(ENDC)")
@@ -39,6 +41,7 @@ RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn
 RAKHSH_CACHE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
 RAKHSH_SOCKET := $(RAKHSH_STATE)/server.pipe
 RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
+RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
 RAKHSH_ZSHRC  := $(PWD)/dot.d/dot.zshrc
 
 brew     := $(shell command -v brew || exit 2)
@@ -190,12 +193,12 @@ dependencies: caches installed outdated
 .PHONY: dependencies
 
 pre-validate: src/tl dependencies
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
 	@set -e; for f in $$(rg -g '*.tl' --files); do $(tlchk) -I$< "$$f"; done
 .PHONY: pre-validate
 
 build: pre-validate
-	$(info [$(call blue,$@)])
+	@echo -e "[$(call blue,$@)]"
 	@rm -rf build
 	@mkdir -p build
 	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
@@ -204,16 +207,23 @@ build: pre-validate
 
 iTerm2.regex:; @jq -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
 iTerm2:
-	$(info [$(call green,$@)])
+	@echo -e "[$(call green,$@)]"
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
 link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
 .PHONY: link
 
+splash:
+	@cat src/data/header.txt > $(RAKHSH_SPLASH)
+	@cat src/data/message.txt | bin/d >> $(RAKHSH_SPLASH)
+	@cat src/data/support.txt >> $(RAKHSH_SPLASH)
+.PHONY: splash
+
 $(RAKHSH_LAZY):; @bin/rx
-install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link
-	$(info [$(call green,$@)])
+install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
+	@echo -e "[$(call green,$@)]"
+.PHONY: install
 
 $(RAKHSH_CONFIG): build
 	@#rsync -ai --info=NAME0 --delete $</ $@/
@@ -221,10 +231,9 @@ $(RAKHSH_CONFIG): build
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
-.PHONY: install
 
-sync: $(RAKHSH_CONFIG) link
-	$(info [$(call green,$@)])
+sync: $(RAKHSH_CONFIG) link splash
+	@echo -e "[$(call green,$@)]"
 .PHONY: sync
 
 purgeinstall: purge install
@@ -237,49 +246,47 @@ unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
 .PHONY: unlink
 
 uninstall: clean unlink
-	$(info [$(call black,$@)])
+	@echo -e "[$(call black,$@)]"
 	rm -f "$(ITERM2_DYN_PROF)"
 	rm -rf $(RAKHSH_CONFIG)
 	rm -f ~/bin/rx
 .PHONY: uninstall
 
 purge: uninstall
-	$(info [$(call black,$@)])
+	@echo -e "[$(call black,$@)]"
 	rm -rf $(RAKHSH_DATA)
 	rm -rf $(RAKHSH_CONFIG)
 	rm -rf $(RAKHSH_SOCKET)
 .PHONY: purge
 
 clean:
-	$(info [$(call yellow,$@)])
+	@echo -e "[$(call yellow,$@)]"
 	rm -rf build
 .PHONY: clean
 
 ################################################################################
 
 ide: reinstall
-	$(info [$(call yellow,$@)])
-	$(info [$(call green,$@)])
+	@echo -e "[$(call yellow,$@)]"
+	@echo -e "[$(call green,$@)]"
 	$(rx)
 
 lazy:
-	$(info [$(call magenta,$@)])
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
+	@echo -e "[$(call magenta,$@)]"
 	lsd --tree "$$($(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"), "\n")' +qa)/lazy"
 
 ls-files:
-	$(info [$(call magenta,$@)])
-	$(info Typed TEAL)
+	@echo -e "[$(call magenta,$@:Teal)]"
 	@lsd --tree src/tl
 ls-files.user:
-	$(info [$(call magenta,$@)])
-	$(info Installed LUA)
+	@echo -e "[$(call magenta,$@:Lua)]"
 	@lsd --tree "$(RAKHSH_CONFIG)"
 .PHONY: ls-files ls-files.user
 
 state: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 state:
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
 	@printf "%-24s" "Socket:"
 	@[ -e $(RAKHSH_SOCKET) ] && echo "$(call green,$(RAKHSH_SOCKET))" || echo "$(call black,$(RAKHSH_SOCKET))"
 	@printf "%-24s" "PID:"
@@ -290,8 +297,13 @@ state:
 
 killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 killsocket:
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
 	kill -9 $(pid)
+
+export PROPAGANDA := rakhsh 
+export FIGLET_FONTDIR := /opt/homebrew/share/figlet/fonts/
+figlet:; @$(foreach f,$(wildcard $(FIGLET_FONTDIR)*.flf),name=$(notdir $(f:%.flf=%));echo;echo "$$name";figlet -f $(f) $${PROPAGANDA:-$${name}};)
+.PHONY: figlet
 
 fonts:
 	sudo rm -rf /Library/Fonts/*Cache*
