@@ -130,22 +130,10 @@ function :pid() {
 }
 
 function :attach() {
-  # iTerm semantic history passes "<file>[:<line>[:<col>]]" as one string.
-  local file ln col _
-  local -a tokens
-  local clicked=0
-  if [[ "$1" == '--iterm' ]]; then
-    #+ Mode: iTerm
-    cd "$2" || return 99
-    let clicked=1
-    tokens+=( "${3}" )
-  elif [[ "$#" -ge 1 ]]; then
-    #+ Mode: CLI
-    tokens+=( "$@" )
-  fi
+  local clicked=$1
+  shift
 
-  [[ ${#tokens[@]} -gt 0 ]] || return 0
-
+  local -a tokens=( "$@" )
   #> :vsc "${tokens[@]}"
 
   local tui tui_attached=0
@@ -154,7 +142,9 @@ function :attach() {
     tui_attached=1
   fi
 
+  #+ iTerm `Semantic History` passes "<file>[:<line>[:<col>]]" as one string.
   local first=1
+  local file ln col _
   for token in "${tokens[@]}"; do
     IFS=':' read -r file ln col _ <<< "${token}"
     if [[ -n "${file}" && -e "${file}" ]]; then
@@ -199,18 +189,22 @@ function :same() {
   return $?
 }
 
-function :ui() {
+function :mirror.exec() {
+  exec nvim --server "${socket}" --remote-ui
+}
+
+function :tui() {
   local attached
   attached=$("$NVIM" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null)
   [[ $? -eq 0 ]] || return 14
   (( attached == 0 )) && return 15 || return 0
 }
 
-function :ui.exec() {
+function :tui.exec() {
   # Require a healthy headless server before we even consider a UI.
   :healthy || return $?
 
-  :ui
+  :tui
   local e=$?
   case $e in
     0)
@@ -219,7 +213,7 @@ function :ui.exec() {
       return 0
       ;;
     14)
-      # :ui could not query the server; fall back to legacy session-based logic.
+      # :tui could not query the server; fall back to legacy session-based logic.
       ;;
     15)
       # No UI is currently attached: this terminal may become the UI owner.
@@ -227,7 +221,7 @@ function :ui.exec() {
       exec "$NVIM" --server "${socket}" --remote-ui
       ;;
     *)
-      # Unexpected status from :ui; propagate it as an error.
+      # Unexpected status from :tui; propagate it as an error.
       return $e
       ;;
   esac
@@ -262,7 +256,7 @@ elif [[ -n "${TESTING}" ]]; then
   :alive;        echo "    alive          [1] | [2]:     $?"  #+ 1 from :socket
   :healthy;      echo "  healthy          [1] | [2]:     $?"  #+ 1 from :socket, 2 from :alive
  #:headless;     echo " headless           [] | []:      $?"
-  :ui.exec;      echo "  ui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
+  :tui.exec;     echo " tui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
   :kill ${sv};   echo "     kill           [] | [6]:     $?"
   :boot;         echo "     boot          [6] | []:      $?"  #+ 6 from :kill
   :pid;          echo "      pid          [1] | [8,9]:   $?"  #+ 1 from :socket
@@ -271,7 +265,22 @@ elif [[ -n "${TESTING}" ]]; then
   :debug
 else
   :boot
-  [[ "$#" -eq 0 ]] || :attach "$@"
-  :ui.exec  # MAY exec into UI (and writes session on first TTY)
+  if [[ "$#" -gt 0 ]]; then
+    if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
+      #+ Mode: CLI
+      :mirror.exec
+    elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
+      #+ Mode: iTerm
+      cd "$2" || exit 99
+      let clicked=1
+      :attach ${clicked} "${3}"
+      :tui.exec  # MAY exec into UI (and writes session on first TTY)
+    elif [[ "$#" -ge 1 ]]; then
+      #+ Mode: CLI
+      let clicked=0
+      :attach ${clicked} "${@}"
+      :tui.exec  # MAY exec into UI (and writes session on first TTY)
+    fi
+  fi
   exit $?
 fi
