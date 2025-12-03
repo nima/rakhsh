@@ -142,34 +142,30 @@ function :attach() {
     tui_attached=1
   fi
 
-  #+ iTerm `Semantic History` passes "<file>[:<line>[:<col>]]" as one string.
-  local first=1
+  if [[ ${#tokens[@]} -eq 0 ]]; then
+    "$NVIM" --headless --server "${socket}" 2>/dev/null || return 11
+    return $?
+  fi
+
   local file ln col _
   for token in "${tokens[@]}"; do
     IFS=':' read -r file ln col _ <<< "${token}"
+
     if [[ -n "${file}" && -e "${file}" ]]; then
       file="$(realpath -- "${file}")"
     fi
 
-    local cmd
-    if (( tui )); then
-      cmd="tab drop"
-    else
-      if (( first )); then
-        cmd="edit"
-      else
-        cmd="tabedit"
-      fi
+    # Open the file in the headless server as a buffer (no tabs).
+    if [[ -n "${file}" ]]; then
+      "$NVIM" --headless --server "${socket}" \
+        --remote-silent "${file}" || return 11
     fi
 
-    first=0
+    # If a line (and optional column) were provided, move the cursor there.
     if [[ $ln =~ ^[0-9]+$ ]]; then
       [[ $col =~ ^[0-9]+$ ]] || col=1
       "$NVIM" --headless --server "${socket}" \
-        --remote-send "<Cmd>${cmd} ${file} | call cursor(${ln},${col})<CR>" || return 11
-    else
-      "$NVIM" --headless --server "${socket}" \
-        --remote-send "<Cmd>${cmd} ${file}<CR>" || return 11
+        --remote-send "<Cmd>call cursor(${ln},${col})<CR>" || return 11
     fi
   done
 
@@ -265,22 +261,20 @@ elif [[ -n "${TESTING}" ]]; then
   :debug
 else
   :boot
-  if [[ "$#" -gt 0 ]]; then
-    if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
-      #+ Mode: CLI
-      :mirror.exec
-    elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
-      #+ Mode: iTerm
-      cd "$2" || exit 99
-      let clicked=1
-      :attach ${clicked} "${3}"
-      :tui.exec  # MAY exec into UI (and writes session on first TTY)
-    elif [[ "$#" -ge 1 ]]; then
-      #+ Mode: CLI
-      let clicked=0
-      :attach ${clicked} "${@}"
-      :tui.exec  # MAY exec into UI (and writes session on first TTY)
-    fi
+  if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
+    #+ Mode: CLI
+    :mirror.exec
+  elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
+    #+ Mode: iTerm
+    cd "$2" || exit 99
+    let clicked=1
+    :attach ${clicked} "${3}"
+    :tui.exec  # MAY exec into UI (and writes session on first TTY)
+  else
+    #+ Mode: CLI
+    let clicked=0
+    :attach ${clicked} "${@}"
+    :tui.exec  # MAY exec into UI (and writes session on first TTY)
   fi
   exit $?
 fi
