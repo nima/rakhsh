@@ -23,9 +23,9 @@ good  = $(shell echo "$(GREEN)$(1)$(ENDC)")
 bad   = $(shell echo "$(RED)$(1)$(ENDC)")
 ugly  = $(shell echo "$(UGLY)$(1)$(ENDC)")
 
-luarocks_t = $(shell echo "[$(CYAN)LuaRocks$(ENDC)]")
-brew_t     = $(shell echo "[$(YELLOW)Brew$(ENDC)]")
-npm_t      = $(shell echo "[$(GREEN)NPM$(ENDC)]")
+luarocks_t = $(shell echo   "[$(CYAN)LuaRocks$(ENDC)]")
+brew_t     = $(shell echo "[$(YELLOW)HomeBrew$(ENDC)]")
+npm_t      = $(shell echo  "[$(GREEN)NdPkgMgr$(ENDC)]")
 
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
@@ -239,7 +239,7 @@ sync: $(RAKHSH_CONFIG) link splash
 purgeinstall: purge install
 .PHONY: purgeinstall
 
-reinstall: uninstall
+reinstall: uninstall install
 .PHONY: reinstall
 
 unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
@@ -284,16 +284,26 @@ ls-files.user:
 	@lsd --tree "$(RAKHSH_CONFIG)"
 .PHONY: ls-files ls-files.user
 
-state: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
-state:
+status: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
+status:
 	@echo -e "[$(call magenta,$@)]"
 	@printf "%-24s" "Socket:"
-	@[ -e $(RAKHSH_SOCKET) ] && echo "$(call green,$(RAKHSH_SOCKET))" || echo "$(call black,$(RAKHSH_SOCKET))"
+	@[ -e $(RAKHSH_SOCKET) ] && echo -e "$(call green,$(RAKHSH_SOCKET))" || echo -e "$(call black,$(RAKHSH_SOCKET))"
 	@printf "%-24s" "PID:"
-	@[ -n "$(pid)" ] && echo "$(call green,$(pid))" || echo "$(call black,000)"
+	@[ -n "$(pid)" ] && echo -e "$(call green,$(pid))" || echo -e "$(call black,000)"
 	@printf "%-24s" "Buffers:"
 	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || n=$$(nvim --server $(RAKHSH_SOCKET) --headless --remote-expr "len(getbufinfo({'buflisted':1}))"); echo "$$n"
-.PHONY: state
+	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || {\
+		printf "%-24s" "Status:";\
+		read -r f t u <<<$$(rx --status);\
+		echo -ne "f:$(BLUE)$${f}$(ENDC)";\
+		printf " ";\
+		echo -ne "t:$(YELLOW)$${t}$(ENDC)";\
+		printf " ";\
+		echo -ne "u:$(BLACK)$${u}$(ENDC)";\
+		echo;\
+	}
+.PHONY: status
 
 killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 killsocket:

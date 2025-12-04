@@ -14,7 +14,6 @@ end
 When rx ui is launched after the socket has already been thrust
 into life via cc (command-clicks), then they will be there in
 the form of headless buffers.  Convert them to tabs.
-]]--
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
@@ -28,6 +27,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
     end
   end,
 })
+]]--
 
 vim.api.nvim_create_autocmd("WinClosed", {
   callback = function(ev: t.vim.VimAutocmdEvent)
@@ -60,3 +60,7 @@ vim.api.nvim_create_autocmd("WinClosed", {
     end
   end,
 })
+
+vim.api.nvim_create_user_command("RakhshStatus", function()
+  print(require("core.status").status_summary())
+end, {})

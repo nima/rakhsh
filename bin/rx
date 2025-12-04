@@ -208,11 +208,9 @@ function :tui.exec() {
       # Do not try to grab UI again; files were already attached via :attach.
       return 0
       ;;
-    14)
-      # :tui could not query the server; fall back to legacy session-based logic.
-      ;;
-    15)
-      # No UI is currently attached: this terminal may become the UI owner.
+	14|15)
+      # Either we couldn't query UIs, or there are none yet.
+      # In both cases, this terminal may become the UI owner.
       [[ -t 1 ]] || return 0
       exec "$NVIM" --server "${socket}" --remote-ui
       ;;
@@ -274,6 +272,8 @@ else
     let clicked=1
     :attach ${clicked} "${3}"
     :tui.exec  # MAY exec into UI (and writes session on first TTY)
+  elif [[ $# -eq 1 ]] && [[ "$1" == '--status' ]] && [[ -S "${socket}" ]]; then
+	${NVIM} --server $socket --headless --remote-expr "luaeval('require(\"core.status\").status_summary()')" +qa
   else
     #+ Mode: CLI
     let clicked=0

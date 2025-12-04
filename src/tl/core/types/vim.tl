@@ -1,5 +1,8 @@
 --= Layer 0
 
+local type VimBufScope = { integer : any }
+local type VimScope    = { string  : any }
+
 local record Vim
   api: VimApi
   fn: VimFn
@@ -10,6 +13,9 @@ local record Vim
   wo: VimWo
   g: VimGlobal
   opt_local: VimOptLocal
+  b: VimBufScope
+  w: VimScope
+  t: VimScope
   bo: {VimBo}
   cmd: VimCmd
   lsp: VimLSP
@@ -64,9 +70,15 @@ local record VimFn
   jobstart: function(cmd: {string} | string, opts: {string: any}): integer
   hlexists: function(name: string): integer
   split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
+  bufname: function(bufnr: integer): string
+  len: function({any}): integer
 end
 
 local record VimApi
+  nvim_list_tabpages: function(): {integer}
+  nvim_tabpage_list_wins: function(tabpage: integer): {integer}
+  nvim_win_get_buf: function(win: integer): integer
+  nvim_win_set_buf: function(win: integer, buf: integer): nil
   nvim_set_hl: function(ns_id: integer, name: string, opts: { string: any }): nil
   nvim_create_autocmd: function(events: {string} | string, opts: VimAutocmdOpts): integer
   nvim_buf_get_keymap: function(bufnr: integer, mode: string): { VimRawMapInfo }
@@ -76,8 +88,10 @@ local record VimApi
   nvim_buf_line_count: function(bufnr: integer): integer
   nvim_buf_get_lines: function(bufnr: integer, start: integer, stop: integer, strict_indexing: boolean): {string}
   nvim_buf_set_lines: function(bufnr: integer, start: integer, stop: integer, strict_indexing: boolean, replacement: {string}): nil
-  nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
+  nvim_buf_set_name: function(bufnr: integer, name: string): nil
+  nvim_buf_set_option: function(bufnr: integer, name: string, value: any): nil
   nvim_win_set_cursor: function(win: integer, pos: VimCursorPosition): nil
+  nvim_win_set_option: function(win: integer, name: string, value: any): nil
   nvim_buf_get_mark: function(bufnr: integer, mark: string): VimCursorPosition
   nvim_win_get_cursor: function(win: integer): VimCursorPosition
   nvim_buf_get_option: function(bufnr: integer, name: string): any
@@ -96,6 +110,8 @@ local record VimApi
   nvim_get_current_win: function(): integer
   nvim_win_get_width: function(win: integer): integer
   nvim_win_get_height: function(win: integer): integer
+  nvim_list_bufs: function(): {integer}
+  nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
 end
 
 local record VimBo
