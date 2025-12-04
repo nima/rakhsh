@@ -76,6 +76,22 @@ def main():
             "text": f"{rakhsh} --iterm \\5 \\1",
         },
         "Use Separate Colors for Light and Dark Mode" : True,
+        "Keyboard Map": {
+            "0xf70e-0x0-0x67": {
+                "Action": 10,
+                "Apply Mode": 0,
+                "Escaping": 1,
+                "Text": "[23~",
+                "Version": 2
+            },
+            "0xf70f-0x0-0x6f": {
+                "Action": 10,
+                "Apply Mode": 0,
+                "Escaping": 1,
+                "Text": "[24~",
+                "Version": 2
+            }
+        }
     }
     data = {"Profiles": [profile]}
 
