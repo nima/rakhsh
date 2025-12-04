@@ -5,6 +5,7 @@ global vim: t.vim.Vim
 --= 0. Disable legacy built-in plugins
 vim.g.loaded_matchit = 1
 vim.opt.shortmess:append("I")
+vim.opt.swapfile = false
 
 --= 1. Pure Core State
 vim.o.laststatus = 3

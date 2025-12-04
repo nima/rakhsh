@@ -190,6 +190,7 @@ local record VimOptGlobal
   more: boolean
   columns: integer
   lines: integer
+  swapfile: boolean
 end
 
 local record VimLoop
@@ -215,6 +216,7 @@ local record VimOptRuntime
   scrolloff: integer
   wrap: boolean
   shortmess: VimOptionList
+  swapfile: boolean
 end
 
 local type VimCallback = function(ev: {string:any} | nil)
