@@ -284,8 +284,8 @@ ls-files.user:
 	@lsd --tree "$(RAKHSH_CONFIG)"
 .PHONY: ls-files ls-files.user
 
-state: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
-state:
+status: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
+status:
 	@echo -e "[$(call magenta,$@)]"
 	@printf "%-24s" "Socket:"
 	@[ -e $(RAKHSH_SOCKET) ] && echo -e "$(call green,$(RAKHSH_SOCKET))" || echo -e "$(call black,$(RAKHSH_SOCKET))"
@@ -293,7 +293,17 @@ state:
 	@[ -n "$(pid)" ] && echo -e "$(call green,$(pid))" || echo -e "$(call black,000)"
 	@printf "%-24s" "Buffers:"
 	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || n=$$(nvim --server $(RAKHSH_SOCKET) --headless --remote-expr "len(getbufinfo({'buflisted':1}))"); echo "$$n"
-.PHONY: state
+	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || {\
+		printf "%-24s" "Status:";\
+		read -r f t u <<<$$(rx --status);\
+		echo -ne "f:$(BLUE)$${f}$(ENDC)";\
+		printf " ";\
+		echo -ne "t:$(YELLOW)$${t}$(ENDC)";\
+		printf " ";\
+		echo -ne "u:$(BLACK)$${u}$(ENDC)";\
+		echo;\
+	}
+.PHONY: status
 
 killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 killsocket:

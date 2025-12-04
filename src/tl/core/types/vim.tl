@@ -71,6 +71,7 @@ local record VimFn
   hlexists: function(name: string): integer
   split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
   bufname: function(bufnr: integer): string
+  len: function({any}): integer
 end
 
 local record VimApi

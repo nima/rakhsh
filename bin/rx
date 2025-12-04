@@ -277,6 +277,8 @@ else
     let clicked=1
     :attach ${clicked} "${3}"
     :tui.exec  # MAY exec into UI (and writes session on first TTY)
+  elif [[ $# -eq 1 ]] && [[ "$1" == '--status' ]] && [[ -S "${socket}" ]]; then
+	${NVIM} --server $socket --headless --remote-expr "luaeval('require(\"core.status\").status_summary()')" +qa
   else
     #+ Mode: CLI
     let clicked=0

@@ -28,6 +28,7 @@ local record M
   get_meta: function(bufnr: integer): RakhshBufMeta | nil
   list_managed: function(): {integer}
   sync_tabs: function(): nil
+  RakhshBufMeta: RakhshBufMeta
 end
 
 local record BufTable

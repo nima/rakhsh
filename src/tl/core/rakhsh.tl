@@ -85,3 +85,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
 vim.api.nvim_create_user_command("RakhshSyncTabs", function()
   buffman.sync_tabs()
 end, {})
+
+vim.api.nvim_create_user_command("RakhshStatus", function()
+  print(require("core.status").status_summary())
+end, {})
