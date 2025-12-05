@@ -206,6 +206,8 @@ end
 
 local record VimViewOptions
   append: function(self: VimViewOptions, value: string): nil
+  remove: function(self: VimViewOptions, value: string): nil
+  get: function(self: VimViewOptions): {string}
 end
 
 local record VimOptRuntime
@@ -395,6 +397,7 @@ local M = {
   VimCursorPositions  = VimCursorPositions,
   VimWo               = VimWo,
   AnyFunction         = AnyFunction,
+  VimViewOptions      = VimViewOptions,
 }
 
 return M
