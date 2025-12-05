@@ -142,31 +142,11 @@ function :attach() {
     tui_attached=1
   fi
 
-  if [[ ${#tokens[@]} -eq 0 ]]; then
-    "$NVIM" --headless --server "${socket}" 2>/dev/null || return 11
-    return $?
-  fi
-
-  local file ln col _
+  local token
   for token in "${tokens[@]}"; do
-    IFS=':' read -r file ln col _ <<< "${token}"
-
-    if [[ -n "${file}" && -e "${file}" ]]; then
-      file="$(realpath -- "${file}")"
-    fi
-
-    # Open the file in the headless server as a buffer (no tabs).
-    if [[ -n "${file}" ]]; then
-      "$NVIM" --headless --server "${socket}" \
-        --remote-silent "${file}" || return 11
-    fi
-
-    # If a line (and optional column) were provided, move the cursor there.
-    if [[ $ln =~ ^[0-9]+$ ]]; then
-      [[ $col =~ ^[0-9]+$ ]] || col=1
-      "$NVIM" --headless --server "${socket}" \
-        --remote-send "<Cmd>call cursor(${ln},${col})<CR>" || return 11
-    fi
+    echo "${token}" >> /tmp/x
+    "$NVIM" --headless --server "${socket}" \
+      --remote-send "<Esc>:RakhshOpen ${token}<CR>" || return 11
   done
 
   return 0

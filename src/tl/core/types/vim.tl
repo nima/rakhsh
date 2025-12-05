@@ -50,6 +50,7 @@ local record VimFn
   expand: function(expr: string): string
   escape: function(str: string, chars: string): string
   fnamemodify: function(fname: string, mods: string): string
+  fnameescape: function(fname: string): string
   matchadd: function(group: string, pattern: string, priority: integer | nil, id: integer | nil): integer
   matchdelete: function(id: integer): integer
   has: function(string): integer
@@ -105,13 +106,14 @@ local record VimApi
   nvim_open_win: function(bufnr: integer, enter: boolean, opts: {string:any}): integer
   nvim_win_close: function(win: integer, force: boolean): nil
   nvim_win_is_valid: function(win: integer): boolean
-  nvim_create_user_command: function(name: string, command: VimCallback | string, opts: {string:any}): nil
+  nvim_create_user_command: function(name: string, command: VimUserCommandCallback | string, opts: {string:any}): nil
   nvim_buf_is_valid: function(bufnr: integer): boolean
   nvim_get_current_win: function(): integer
   nvim_win_get_width: function(win: integer): integer
   nvim_win_get_height: function(win: integer): integer
   nvim_list_bufs: function(): {integer}
   nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
+  nvim_buf_call: function(bufnr: integer, fn: VimCallback): any
 end
 
 local record VimBo
@@ -130,6 +132,7 @@ local record VimBo
   cinoptions: string
   modified: boolean
   swapfile: boolean
+  buflisted: boolean
 end
 
 local record VimTreesitter
@@ -232,6 +235,18 @@ local record VimAutocmdOpts
   group: integer | nil
   pattern: string | {string} | nil
 end
+
+local record VimUserCommandOpts
+  name: string
+  args: string
+  fargs: {string}
+  bang: boolean
+  count: integer
+  reg: string
+  mods: string
+end
+
+local type VimUserCommandCallback = function(opts: VimUserCommandOpts)
 
 local type VimCmd = function(string): nil
 
@@ -366,6 +381,8 @@ local M = {
   VimDiagnostic       = VimDiagnostic,
   VimCallback         = VimCallback,
   VimAutocmdOpts      = VimAutocmdOpts,
+  VimUserCommandOpts    = VimUserCommandOpts,
+  VimUserCommandCallback = VimUserCommandCallback,
   VimApi              = VimApi,
   Vim                 = Vim,
   VimNotify           = VimNotify,

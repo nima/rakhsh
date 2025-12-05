@@ -10,24 +10,18 @@ if vim.fn.has("nvim") == 1 then
   end
 end
 
---[[
-When rx ui is launched after the socket has already been thrust
-into life via cc (command-clicks), then they will be there in
-the form of headless buffers.  Convert them to tabs.
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
-    local bufs = vim.fn.getbufinfo({ buflisted = 1 })
-    if #bufs == 0 then return end
-    local cur = vim.api.nvim_get_current_buf()
-    for _, info in ipairs(bufs) do
-      if info.bufnr ~= cur then
-        vim.cmd(("tab sbuffer %d"):format(info.bufnr))
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buflisted then
+        vim.api.nvim_buf_call(bufnr, function()
+          vim.cmd("doautocmd BufReadPost")
+        end)
       end
     end
   end,
 })
-]]--
 
 vim.api.nvim_create_autocmd("WinClosed", {
   callback = function(ev: t.vim.VimAutocmdEvent)
@@ -61,6 +55,46 @@ vim.api.nvim_create_autocmd("WinClosed", {
   end,
 })
 
-vim.api.nvim_create_user_command("RakhshStatus", function()
+
+vim.api.nvim_create_user_command(
+  "RakhshOpen",
+  function(opts: t.vim.VimUserCommandOpts)
+    local token = opts.args
+    if token == "" then
+      return
+    end
+
+    local lnum: integer = 1
+    local col: integer = 1
+
+    -- token can be: file, file:ln, file:ln:col, file::, file:ln:, etc.
+    local file, ln, c = token:match("^(.-):(%d*):?(%d*)$")
+
+    if file == nil then
+      -- no colons at all → plain filename
+      file = token
+    else
+      -- ln is digits or empty
+      if ln ~= "" then
+        local ln_num = tonumber(ln)
+        if ln_num then lnum = ln_num as integer end
+      end
+
+      -- c is digits or empty
+      if c ~= "" then
+        local col_num = tonumber(c)
+        if col_num then col = col_num as integer end
+      end
+    end
+
+    vim.cmd("edit " .. vim.fn.fnameescape(file))
+
+    local pos: t.vim.VimCursorPosition = { lnum, col - 1 }
+    pcall(vim.api.nvim_win_set_cursor, 0, pos)
+  end,
+  { nargs = 1 }
+)
+
+vim.api.nvim_create_user_command("RakhshStatus", function(_: t.vim.VimUserCommandOpts)
   print(require("core.status").status_summary())
 end, {})

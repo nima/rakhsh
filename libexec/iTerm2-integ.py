@@ -24,41 +24,15 @@ def main():
     That iTerm2 sees a "Rakhsh" profile with:
 
         - a Smart Selection rule for file:line[:col]
-        - Semantic History configured to run `rx --iterm \5 \1`.
+        - Semantic History configured to run `rx --iterm \5 \1:\2`.
 
-    Sample product @ "$HOME/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json":
-        ```json
-        {
-          "Profiles" : [
-            {
-              "Smart Selection Rules" : [
-                {
-                  "notes" : "Rakhsh: code file with optional :line:col",
-                  "regex" : "...",
-                  "precision" : "very_high"
-                }
-              ],
-              "Use Non-ASCII Font" : true,
-              "Non Ascii Font" : "Menlo-Regular 11",
-              "Normal Font" : "0xProtoNFP-Regular 11",
-              "Rewritable" : false,
-              "Semantic History" : {
-                "action" : "command",
-                "text" : "/opt/github/rakhsh/bin/rx --iterm \\5 \\1"
-              },
-              "Guid" : "8B6A6C58-7E18-4A32-B4C1-5F8A3A9E7F01",
-              "Name" : "Rakhsh",
-              "Use Separate Colors for Light and Dark Mode" : true
-            }
-          ]
-        }
-        ```
+    Artifact will be produced in "$HOME/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json":
     """
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
     repo_root = os.path.abspath(os.path.join(script_dir, os.pardir))
     rakhsh = os.path.join(repo_root, "bin", "rx")
-    profile = {
+    profile = { # type: ignore
         "Guid": PROFILE_GUID,
         "Name": PROFILE_NAME,
         "Normal Font": NERD_FONT,
@@ -73,7 +47,7 @@ def main():
         ],
         "Semantic History": {
             "action": "command",
-            "text": f"{rakhsh} --iterm \\5 \\1",
+            "text": f"{rakhsh} --iterm \\5 \\1:\\2",
         },
         "Use Separate Colors for Light and Dark Mode" : True,
         "Keyboard Map": {
@@ -93,7 +67,7 @@ def main():
             }
         }
     }
-    data = {"Profiles": [profile]}
+    data = {"Profiles": [profile]} # type: ignore
 
     home = os.path.expanduser("~")
     dyn_dir = os.path.join(home, "Library", "Application Support", "iTerm2", "DynamicProfiles")
