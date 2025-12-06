@@ -129,47 +129,50 @@ local function apply_comment_tag_extmarks(bufnr: integer)
 end
 
 local function read_splash_lines(): {string}
-  -- Try to read a custom splash file from the data directory.
-  -- If missing or empty, fall back to the built-in default.
-  local default = {
-    "_____            _      _     ",
-    "|  __ \\          | |    | |    ",
-    "| |__) |__ _  ___| | __ | |__  ",
-    "|  _  // _` |/ __| |/ / | '_ \\",
-    "| | \\ \\ (_| | (__|   <  | | | |",
-    "|_|  \\_\\__,_|\\___|_|\\_\\ |_| |_|",
-    "",
-    "Rakhsh · Neovim IDE",
-    "q to quit, :e file.tl to start editing",
-  }
-
   local ok, datadir = pcall(vim.fn.stdpath, "data")
-  if not ok or type(datadir) ~= "string" or datadir == "" then
-    return default
-  end
+  if not ok then return {} end
 
   local path = datadir .. "/splash.txt"
   local fh = io.open(path, "r")
-  if not fh then
-    return default
-  end
+  if fh == nil then return {} end
 
   local lines = {} as {string}
-  for line in fh:lines() do
-    table.insert(lines, line)
-  end
+  for line in fh:lines() do table.insert(lines, line) end
   fh:close()
-
-  if #lines == 0 then
-    return default
-  end
 
   return lines
 end
 
 local function show_rakhsh_splash(): nil
   local buf = vim.api.nvim_get_current_buf()
-  local win = vim.api.nvim_get_current_win()
+  local _win = vim.api.nvim_get_current_win()
+
+  local lines = read_splash_lines()
+  if #lines == 0 then return end
+
+  -- Center relative to the current window's text region.
+  local width  = vim.api.nvim_win_get_width(0)
+  local height = vim.api.nvim_win_get_height(0)
+
+  local padded = {} as {string}
+
+  -- vertical centering: prepend empty lines based on the full splash height.
+  local top_pad = 0
+  if height > #lines then
+    top_pad = math.floor((height - #lines) / 2)
+  end
+  for _ = 1, top_pad do
+    table.insert(padded, "")
+  end
+
+  -- horizontal centering for every splash line
+  for _, l in ipairs(lines) do
+    local pad = 0
+    if #l < width then
+      pad = math.floor((width - #l) / 2)
+    end
+    table.insert(padded, string.rep(" ", pad) .. l)
+  end
 
   vim.bo[buf].buftype    = "nofile"
   vim.bo[buf].bufhidden  = "wipe"
@@ -183,31 +186,6 @@ local function show_rakhsh_splash(): nil
   vim.wo.foldcolumn     = "0"
   vim.wo.list           = false
   vim.wo.cursorline     = false
-
-  local lines = read_splash_lines()
-
-  local width  = vim.api.nvim_win_get_width(win)
-  local height = vim.api.nvim_win_get_height(win)
-
-  local padded = {} as {string}
-
-  -- vertical centering: prepend empty lines
-  local top_pad = 0
-  if height > #lines then
-    top_pad = math.floor((height - #lines) / 2)
-  end
-  for _ = 1, top_pad do
-    table.insert(padded, "")
-  end
-
-  -- horizontal centering for each line
-  for _, l in ipairs(lines) do
-    local pad = 0
-    if #l < width then
-      pad = math.floor((width - #l) / 2)
-    end
-    table.insert(padded, string.rep(" ", pad) .. l)
-  end
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
 
@@ -246,16 +224,31 @@ function M.init(): nil
   -- Rakhsh startup splash (only when no files are passed and the
   -- initial buffer is still an empty, normal buffer). Some setups
   -- report 0 lines at this point, others report a single empty line,
-  -- so we treat both as "empty".
+  -- so we treat both as "empty". We schedule the actual splash render
+  -- on VimEnter so the final window size is known for centering.
+  local want_splash = false
   if argc == 0 and bt == "" then
     if line_count == 0 then
-      show_rakhsh_splash()
+      want_splash = true
     elseif line_count == 1 then
       local first = (vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or "")
       if first == "" then
-        show_rakhsh_splash()
+        want_splash = true
       end
     end
+  end
+
+  if want_splash then
+    vim.api.nvim_create_autocmd("VimEnter", {
+      once = true,
+      callback = function()
+        -- Draw the splash once Neovim has entered the UI; we use the current
+        -- window size for centering and don't try to outsmart the launcher.
+        vim.schedule(function()
+          show_rakhsh_splash()
+        end)
+      end,
+    })
   end
 
   vim.api.nvim_create_autocmd({"VimEnter", "BufWinEnter", "BufWritePost", "TextChanged", "TextChangedI"}, {
