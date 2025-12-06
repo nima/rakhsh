@@ -24,5 +24,6 @@ require("core.plugins").init({
   "plugins.folds",      -- Special Comment Folds
   "plugins.lint",       -- Lint
   "plugins.observer",   -- Observer
+  "plugins.dialogues",  -- Pop-up dialogues
   --"plugins.odbc",     -- Database connections
 })
