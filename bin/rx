@@ -43,25 +43,29 @@ function :debug() {
 }
 
 function :vsc() {
+  # VS Code CLI must exist
   [[ -x "${vscode}" ]] || return 0
 
-  # code --reuse-window --goto "$(realpath "$1")"
-  local -a tokens
+  # Only do anything if VS Code is already running
+  pgrep -qf "Code" >/dev/null 2>&1 || return 0
+
+  # Normalize arguments to absolute file paths and strip any :ln[:col] suffix
+  local -a files=()
+  local token path
   for token in "$@"; do
-    tokens+=( "$(realpath "${token}")" )
+    path="${token}"
+    if [[ "${path}" =~ ^(.*):([0-9]+)(:[0-9]+)?$ ]]; then
+      path="${BASH_REMATCH[1]}"
+    fi
+    path="$(realpath "${path}")" || continue
+    files+=( "${path}" )
   done
-  open -g -a "Visual Studio Code" --args --reuse-window --goto "${tokens[@]}"
 
-  if [ $# -eq 1 ]; then
-    me="$(osascript -e 'tell application "System Events" to get name of first process whose frontmost is true')"
-    osascript\
-      -e 'tell application "Visual Studio Code" to activate'\
-      -e 'tell application "System Events" to keystroke "t" using {command down, option down}'\
-    ;
-  fi
+  (( ${#files[@]} > 0 )) || return 0
 
-  osascript -e "tell application \"$me\" to activate"
-  return $?
+  # Do not steal focus / switch desktop
+  open -g -a "Visual Studio Code" "${files[@]}" >/dev/null 2>&1 || true
+  return 0
 }
 
 function :socket() {
@@ -134,7 +138,7 @@ function :attach() {
   shift
 
   local -a tokens=( "$@" )
-  #> :vsc "${tokens[@]}"
+  :vsc "${tokens[@]}"
 
   local tui tui_attached=0
   tui=$("$NVIM" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null || echo "")
