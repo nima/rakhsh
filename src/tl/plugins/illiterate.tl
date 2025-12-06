@@ -48,13 +48,13 @@ function M.lazy(): t.plugins.PluginSpec
         mode = "n",
         role = R.TUI,
         key = "?",
-        rhs = "<cmd>split | TSModuleInfo<CR>",
+        rhs = "<cmd>vsplit | TSModuleInfo<CR>",
         desc = "TS: module info",
         tags = { T.ActionInfo, T.TargetBuffer },
         on = On.Immediate,
       },
     },
-    config = function(): ()
+    config = function(): nil
       local _cfg = "nvim-treesitter.configs"
       local cfg = (require(_cfg) as TreeSitterConfigsModule)
       cfg.setup({
