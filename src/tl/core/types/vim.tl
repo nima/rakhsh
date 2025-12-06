@@ -77,6 +77,7 @@ local record VimFn
   split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
   bufname: function(bufnr: integer): string
   len: function({any}): integer
+  getenv: function(varname: string): string | nil
 end
 
 local type VimCursorPosition = { integer, integer }
@@ -363,6 +364,8 @@ end
 
 local record VimEnv
   OPENAI_API_KEY: string | nil
+  COLUMNS: string | nil
+  LINES: string | nil
 end
 
 local record VimNotify
