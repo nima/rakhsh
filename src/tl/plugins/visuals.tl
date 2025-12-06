@@ -238,9 +238,24 @@ local M: t.plugins.PluginModule = {}
 function M.init(): nil
   vim.g.colorscheme = cfg.colorschema
 
-  -- Rakhsh startup splash (only when no files are passed)
-  if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" then
-    show_rakhsh_splash()
+  local argc = vim.fn.argc()
+  local buf = vim.api.nvim_get_current_buf()
+  local bt = vim.bo[buf].buftype
+  local line_count = vim.api.nvim_buf_line_count(buf)
+
+  -- Rakhsh startup splash (only when no files are passed and the
+  -- initial buffer is still an empty, normal buffer). Some setups
+  -- report 0 lines at this point, others report a single empty line,
+  -- so we treat both as "empty".
+  if argc == 0 and bt == "" then
+    if line_count == 0 then
+      show_rakhsh_splash()
+    elseif line_count == 1 then
+      local first = (vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or "")
+      if first == "" then
+        show_rakhsh_splash()
+      end
+    end
   end
 
   vim.api.nvim_create_autocmd({"VimEnter", "BufWinEnter", "BufWritePost", "TextChanged", "TextChangedI"}, {

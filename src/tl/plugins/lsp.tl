@@ -1,7 +1,8 @@
 local t = require("core.types")
-local u = require("core.utils")
-local R = u.Roles;
-local T = u.Tags;
+local keymaps = require("core.keymaps")
+local plugins = require("core.plugins")
+local R = keymaps.Roles;
+local T = keymaps.Tags;
 global vim: t.vim.Vim
 
 local type PluginSpec = t.plugins.PluginSpec
@@ -27,7 +28,7 @@ end
 
 local On = t.plugins.KeymapEvents
 function M.lazy(): PluginSpec
-  local keymaps: {PluginKeymap} = {
+  local plugin_keymaps: {PluginKeymap} = {
     { mode = "n", role = R.Go,     key = "gd", rhs = vim.lsp.buf.definition, on = On.Attach, desc = "LSP: goto definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.Go,     key = "gD", rhs = vim.lsp.buf.declaration, on = On.Attach, desc = "LSP: goto declaration", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.Go,     key = "gI", rhs = vim.lsp.buf.implementation, on = On.Attach, desc = "LSP: goto implementation", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
@@ -50,7 +51,7 @@ function M.lazy(): PluginSpec
     "neovim/nvim-lspconfig",
     dependencies = { "hrsh7th/cmp-nvim-lsp" },
     lazy = false,
-    keymaps = keymaps,
+    keymaps = plugin_keymaps,
     config = function()
       local _ = "cmp_nvim_lsp"
       local mod = (require(_) as CmpLspModule)
@@ -71,7 +72,7 @@ function M.lazy(): PluginSpec
       local api = vim.api as LspAttachApi
       api.nvim_create_autocmd("LspAttach", {
         callback = function(e: LspAttachEvent)
-          u.apply_plugin_attach_keymaps("plugins.lsp", e.buf)
+          plugins.apply_plugin_attach_keymaps("plugins.lsp", e.buf)
         end,
       })
     end,

@@ -1,8 +1,8 @@
 local t = require("core.types")
-local u = require("core.utils")
+local keymaps = require("core.keymaps")
+local R = keymaps.Roles
+local T = keymaps.Tags
 local On = t.plugins.KeymapEvents
-local R = u.Roles
-local T = u.Tags
 
 global vim: t.vim.Vim
 
@@ -24,7 +24,7 @@ end
  
 local type PluginSpec = t.plugins.PluginSpec
 function M.lazy(): PluginSpec
-  local keymaps = {
+  local km = {
     { mode = "n", role = R.AI, key = "c", rhs = guard("<cmd>ChatGPT<CR>"),
       desc = "ChatGPT: main chat window",
       tags = { T.ActionLaunch, T.TargetDialogue },
@@ -83,7 +83,7 @@ function M.lazy(): PluginSpec
   return {
     "jackMort/ChatGPT.nvim",
     lazy = false,
-    keymaps = keymaps,
+    keymaps = km,
     dependencies = {
       "kiddos/gemini.nvim",
       "nvim-lua/plenary.nvim",

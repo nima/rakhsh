@@ -1,7 +1,8 @@
 local t = require("core.types")
-local R = t.roles.Roles
-local T = t.tags.Tags
-local u = require("core.utils")
+local keymaps = require("core.keymaps")
+local plugins = require("core.plugins")
+local R = keymaps.Roles;
+local T = keymaps.Tags;
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -26,7 +27,7 @@ local type PluginSpec = t.plugins.PluginSpec
 local _mod = "gitsigns"
 function M.lazy(): PluginSpec
   local function gs(): GitSigns return (require(_mod) as GitSigns) end
-  local keymaps : { PluginKeymap } = {
+  local km : { PluginKeymap } = {
     { mode = "n", role = R.Go,    key = "]", rhs = function() gs().next_hunk() end,                 desc = "Next git hunk",             tags = tags_next_prev, on = On.Attach },
     { mode = "n", role = R.Go,    key = "[", rhs = function() gs().prev_hunk() end,                 desc = "Prev git hunk",             tags = tags_next_prev, on = On.Attach },
     { mode = "n", role = R.GoVia, key = "p", rhs = function() gs().preview_hunk() end,              desc = "Preview git hunk",          tags = tags_preview,   on = On.Attach },
@@ -37,7 +38,7 @@ function M.lazy(): PluginSpec
     "lewis6991/gitsigns.nvim",
     event = { "BufReadPre", "BufNewFile" },
     lazy = false,
-    keymaps = keymaps,
+    keymaps = km,
     config = function()
       local mod = (require(_mod) as GitSigns)
       mod.setup({
@@ -54,7 +55,7 @@ function M.lazy(): PluginSpec
         --+ position: 'eol' | 'overlay' | 'right_align'
         current_line_blame_opts = { delay = 200, virt_text_pos = 'eol' },
         on_attach = function(bufnr: integer)
-          u.apply_plugin_attach_keymaps("plugins.git", bufnr)
+          plugins.apply_plugin_attach_keymaps("plugins.git", bufnr)
         end,
       })
     end,
