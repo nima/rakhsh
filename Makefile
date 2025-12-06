@@ -216,7 +216,7 @@ link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
 
 splash:
 	@cat src/data/header.txt > $(RAKHSH_SPLASH)
-	@cat src/data/message.txt | bin/d >> $(RAKHSH_SPLASH)
+	@cat src/data/message.txt | libexec/d >> $(RAKHSH_SPLASH)
 	@cat src/data/support.txt >> $(RAKHSH_SPLASH)
 .PHONY: splash
 
