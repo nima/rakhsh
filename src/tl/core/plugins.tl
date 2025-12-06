@@ -174,6 +174,10 @@ local function validate_keymaps_impl(): nil
   end
 end
 
+local function has_lazy(): boolean
+  return (vim.loop and vim.loop.fs_stat and vim.loop.fs_stat(lazypath)) ~= nil
+end
+
 local initialized = false
 local function ensure_initialized(): nil
   if initialized then return end
@@ -190,11 +194,14 @@ local function ensure_initialized(): nil
   initialized = true
 end
 
+
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
-    ensure_initialized()
-    if setup_lazy(false) then return end
+    --+ if lazy.nvim already exists, then M.init already called setup_lazy(false)
+    if has_lazy() then return end
+
+    --+ if not, lazy not installed yet → run installer: Lazy's UI
     RakhshLazyInstall()
   end,
 })
@@ -209,7 +216,12 @@ M.validate_keymaps = validate_keymaps_impl
 function M.init(plugin_modules: {string}): nil
   plugs = plugin_modules
   keymaps.safemap("n", R.Toggle, "I", M.install, keymaps.opts("Install Rakhsh IDE", { T.ActionLaunch }))
+
+  --+ build plugin specs + keymaps eagerly
   ensure_initialized()
+
+  --+ if lazy.nvim already installed, set up plugins now
+  if has_lazy() then setup_lazy(false) end
 end
 
 return M
