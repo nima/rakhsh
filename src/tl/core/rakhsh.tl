@@ -2,50 +2,6 @@
 local t = require("core.types")
 global vim: t.vim.Vim
 
-vim.api.nvim_create_autocmd("UIEnter", {
-  once = true,
-  callback = function()
-    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-      if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buflisted then
-        vim.api.nvim_buf_call(bufnr, function()
-          vim.cmd("doautocmd BufReadPost")
-        end)
-      end
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("WinClosed", {
-  callback = function(ev: t.vim.VimAutocmdEvent)
-    local win = tonumber(ev.match)
-    if not win then
-      vim.notify("WinClosed: no win (match=" .. tostring(ev.match) .. ")", vim.log.levels.WARN)
-      return
-    end
-
-    local buf = vim.fn.winbufnr(win)
-    local others = vim.fn.win_findbuf(buf)
-    local visible_elsewhere = 0
-    for _, w in ipairs(others) do
-      if w ~= win then
-        visible_elsewhere = visible_elsewhere + 1
-      end
-    end
-    local bt = vim.bo[buf].buftype
-
-    --[[
-    local name = vim.api.nvim_buf_get_name(buf)
-    vim.notify(("WinClosed: win=%g buf=%d name=%s buftype=%s others=%d visible_elsewhere=%d"):format(
-      win, buf, name, bt, #others, visible_elsewhere
-    ), vim.log.levels.INFO)
-    ]]--
-
-    if visible_elsewhere > 0 then return end
-    if vim.api.nvim_buf_is_loaded(buf) and bt == "" then
-      vim.cmd("bdelete " .. buf)
-    end
-  end,
-})
 
 -- -=[
 vim.api.nvim_create_autocmd("BufReadPost", {
@@ -87,7 +43,7 @@ local record FilePosition
   c: integer
 end
 
-local function restore_cursor_position(token: string): FilePosition
+local function parse_cursor_position(token: string): FilePosition
   local fpos: FilePosition = { f = token, l = 0, c = 0 }
 
   --+ token: <file>[:<ln>[:<col>]]
@@ -112,9 +68,9 @@ vim.api.nvim_create_user_command(
     local token = opts.args
     if token == "" then return end
 
-    local p = restore_cursor_position(token)
+    local p = parse_cursor_position(token)
     vim.cmd("edit " .. vim.fn.fnameescape(p.f))
-    --+ BufWinEnter runs to completion here
+    --+ BufReadPost runs to completion here
     if p.l == 0 then return end
 
     --+ Cursor position is 0-based internally
