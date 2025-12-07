@@ -1,27 +1,60 @@
-local record VimMapOpts
-  noremap: boolean
-  silent: boolean
-  desc: string
-  buffer: integer
+--= Layer 0
+
+local type VimScope    = { string  : any }
+
+local record RakhshStateBuffer
+  dirty: boolean | nil
+  position: VimCursorPosition | nil
 end
 
-local record VimMapInfo
-  lhs: string
-  rhs: any
-  script: string
-  lnum: integer
+local record Vim
+  api: VimApi
+  fn: VimFn
+  keymap: VimKeymap
+  loop: VimLoop
+  opt: VimOptRuntime
+  o: VimOptGlobal
+  wo: VimWo
+  g: VimGlobal
+  opt_local: VimOptLocal
+  b: {RakhshStateBuffer}
+  w: VimScope
+  t: VimScope
+  bo: {VimBo}
+  cmd: VimCmd
+  lsp: VimLSP
+  log: VimLog
+  env: VimEnv
+  diagnostic: VimDiagnostic
+  tbl_extend: function(behavior: string, dst: {string:any}, src: {string:any}...): {string:any}
+  notify: function(msg: string, level: any | nil, opts: { string: any } | nil | nil...): any
+  pesc: function(str: string): string
+  schedule: function(callback: function): nil
+  defer_fn: function(callback: function, delay: integer): nil
+  treesitter: VimTreesitter
+  --- add optional lua-level split if desired
+  split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
 end
 
-local record VimBufInfo
-  bufnr: integer
+--= Layer 1
+
+local record VimSplitOpts
+  plain: boolean
+end
+
+local record VimExec2Result
+  output: string
 end
 
 local record VimFn
+  argc: function(): integer
   maparg: function(lhs: string, mode: string, abbr: boolean, dict: boolean): any
   stdpath: function(kind: string): string
   system: function(cmd: {string}): string
   expand: function(expr: string): string
   escape: function(str: string, chars: string): string
+  fnamemodify: function(fname: string, mods: string): string
+  fnameescape: function(fname: string): string
   matchadd: function(group: string, pattern: string, priority: integer | nil, id: integer | nil): integer
   matchdelete: function(id: integer): integer
   has: function(string): integer
@@ -39,11 +72,106 @@ local record VimFn
   writefile: function(lines: {string}, fname: string): any
   mkdir: function(path: string, mode: string): any
   clearmatches: function(): any
+  jobstart: function(cmd: {string} | string, opts: {string: any}): integer
+  hlexists: function(name: string): integer
+  split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
+  bufname: function(bufnr: integer): string
+  len: function({any}): integer
+  getenv: function(varname: string): string | nil
+end
+
+local type VimCursorPosition = { integer, integer }
+local type VimCursorPositions = { string: VimCursorPosition }
+
+local record VimApi
+  nvim_list_tabpages: function(): {integer}
+  nvim_tabpage_list_wins: function(tabpage: integer): {integer}
+  nvim_win_get_buf: function(win: integer): integer
+  nvim_win_set_buf: function(win: integer, buf: integer): nil
+  nvim_set_hl: function(ns_id: integer, name: string, opts: { string: any }): nil
+  nvim_create_autocmd: function(events: {string} | string, opts: VimAutocmdOpts): integer
+  nvim_buf_get_keymap: function(bufnr: integer, mode: string): { VimRawMapInfo }
+  nvim_buf_get_name: function(bufnr: integer): string
+  nvim_list_uis: function(): {NvimUI}
+  nvim_create_buf: function(listed: boolean, scratch: boolean): integer
+  nvim_buf_line_count: function(bufnr: integer): integer
+  nvim_buf_get_lines: function(bufnr: integer, start: integer, stop: integer, strict_indexing: boolean): {string}
+  nvim_buf_set_lines: function(bufnr: integer, start: integer, stop: integer, strict_indexing: boolean, replacement: {string}): nil
+  nvim_buf_set_name: function(bufnr: integer, name: string): nil
+  nvim_buf_set_option: function(bufnr: integer, name: string, value: any): nil
+  nvim_win_set_cursor: function(win: integer, pos: VimCursorPosition): nil
+  nvim_win_set_option: function(win: integer, name: string, value: any): nil
+  nvim_buf_get_mark: function(bufnr: integer, mark: string): VimCursorPosition
+  nvim_win_get_cursor: function(win: integer): VimCursorPosition
+  nvim_buf_get_option: function(bufnr: integer, name: string): any
+  nvim_buf_is_loaded: function(bufnr: integer): boolean
+  nvim_create_namespace: function(name: string): integer
+  nvim_create_augroup: function(name: string, opts: {string:any}): integer
+  nvim_buf_clear_namespace: function(bufnr: integer, ns_id: integer, line_start: integer, line_end: integer): nil
+  nvim_get_current_buf: function(): integer
+  nvim_exec2: function(cmd: string, opts: {string:any}): VimExec2Result
+  nvim_set_option_value: function(name: string, value: any, opts: {string:any}): nil
+  nvim_open_win: function(bufnr: integer, enter: boolean, opts: {string:any}): integer
+  nvim_win_close: function(win: integer, force: boolean): nil
+  nvim_win_is_valid: function(win: integer): boolean
+  nvim_create_user_command: function(name: string, command: VimUserCommandCallback | string, opts: {string:any}): nil
+  nvim_buf_is_valid: function(bufnr: integer): boolean
+  nvim_get_current_win: function(): integer
+  nvim_win_get_width: function(win: integer): integer
+  nvim_win_get_height: function(win: integer): integer
+  nvim_list_bufs: function(): {integer}
+  nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
+  nvim_buf_call: function(bufnr: integer, fn: VimCallback): any
+end
+
+local record VimBo
+  filetype: string
+  bufnr: integer
+  buftype: string
+  bufhidden: string
+  commentstring: string
+  bufmodified: boolean
+  expandtab: boolean
+  shiftwidth: integer
+  tabstop: integer
+  softtabstop: integer
+  modifiable: boolean
+  cindent: boolean
+  cinoptions: string
+  modified: boolean
+  swapfile: boolean
+  buflisted: boolean
+end
+
+local record VimTreesitter
+  get_parser: function(bufnr: integer, lang: string | nil, opts: any | nil): any
+  language: VimTreesitterLanguage
 end
 
 local record VimKeymap
   set: function(mode: string | {string}, lhs: string, rhs: any, opts: VimMapOpts): nil
   get: function(mode: string | {string}, lhs: string, opts: any | nil): { VimRawMapInfo }
+end
+
+--= Layers 3+
+
+local record VimMapOpts
+  noremap: boolean
+  silent: boolean
+  desc: string
+  buffer: integer
+  nowait: boolean | nil
+end
+
+local record VimMapInfo
+  lhs: string
+  rhs: any
+  script: string
+  lnum: integer
+end
+
+local record VimBufInfo
+  bufnr: integer
 end
 
 local record VimOptionList
@@ -69,6 +197,13 @@ local record VimOptGlobal
   cmdheight: integer
   updatetime: integer
   viewoptions: string
+  viewdir: string
+  more: boolean
+  columns: integer
+  lines: integer
+  swapfile: boolean
+  shada: string
+  shadafile: string
 end
 
 local record VimLoop
@@ -79,28 +214,23 @@ local record VimOptRuntimeRtp
   prepend: function(self: any, path: string): nil
 end
 
+local record VimViewOptions
+  append: function(self: VimViewOptions, value: string): nil
+  remove: function(self: VimViewOptions, value: string): nil
+  get: function(self: VimViewOptions): {string}
+end
+
 local record VimOptRuntime
   rtp: VimOptRuntimeRtp
   modeline: boolean
   modelines: integer
   modelineexpr: boolean
+  viewoptions: VimViewOptions
+  scrolloff: integer
+  wrap: boolean
+  shortmess: VimOptionList
+  swapfile: boolean
 end
-
-local record VimBoBuf
-  bufhidden: string
-  modifiable: boolean
-  expandtab: boolean
-  shiftwidth: integer
-  tabstop: integer
-  softtabstop: integer
-  cindent: boolean
-  cinoptions: string
-  commentstring: string | nil
-  filetype: string
-  buftype: string
-end
-
-local type VimBo = { integer: VimBoBuf }
 
 local type VimCallback = function(ev: {string:any} | nil)
 
@@ -117,6 +247,18 @@ local record VimAutocmdOpts
   group: integer | nil
   pattern: string | {string} | nil
 end
+
+local record VimUserCommandOpts
+  name: string
+  args: string
+  fargs: {string}
+  bang: boolean
+  count: integer
+  reg: string
+  mods: string
+end
+
+local type VimUserCommandCallback = function(opts: VimUserCommandOpts)
 
 local type VimCmd = function(string): nil
 
@@ -175,37 +317,13 @@ local record NvimUI
   ext_popupmenu: boolean
 end
 
-local type VimCursorPosition = { integer, integer }
-local type VimCursorPositions = {string: VimCursorPosition }
-
 local record VimRawMapInfo
   lhs: string
   rhs: any
   script: string
   lnum: integer
-  desc: string | nil
+  desc: string
   callback: function | nil
-end
-
-local record VimApi
-  nvim_set_hl: function(ns_id: integer, name: string, opts: { string: any }): nil
-  nvim_create_autocmd: function(events: {string} | string, opts: VimAutocmdOpts): integer
-  nvim_buf_get_keymap: function(bufnr: integer, mode: string): { VimRawMapInfo }
-  nvim_buf_get_name: function(bufnr: integer): string
-  nvim_list_uis: function(): {NvimUI}
-  nvim_create_buf: function(listed: boolean, scratch: boolean): integer
-  nvim_buf_line_count: function(bufnr: integer): integer
-  nvim_buf_get_lines: function(bufnr: integer, start: integer, stop: integer, strict_indexing: boolean): {string}
-  nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
-  nvim_win_set_cursor: function(win: integer, pos: VimCursorPosition): nil
-  nvim_buf_get_mark: function(bufnr: integer, mark: string): VimCursorPosition
-  nvim_win_get_cursor: function(win: integer): VimCursorPosition
-  nvim_buf_get_option: function(bufnr: integer, name: string): any
-  nvim_buf_is_loaded: function(bufnr: integer): boolean
-  nvim_create_namespace: function(name: string): integer
-  nvim_create_augroup: function(name: string, opts: {string:any}): integer
-  nvim_buf_clear_namespace: function(bufnr: integer, ns_id: integer, line_start: integer, line_end: integer): nil
-  nvim_get_current_buf: function(): integer
 end
 
 local record VimWo
@@ -214,6 +332,9 @@ local record VimWo
   cursorline: boolean
   cursorcolumn: boolean
   foldmethod: string
+  signcolumn: string
+  foldcolumn: string
+  list: boolean
 end
 
 local record VimGlobal
@@ -221,6 +342,7 @@ local record VimGlobal
   colorscheme: string | nil
   string: any
   pos: VimCursorPositions
+  loaded_matchit: integer | nil
 end
 
 local record VimLogLevels
@@ -231,28 +353,23 @@ local record VimLogLevels
   ERROR: integer
 end
 
+local record VimTreesitterLanguage
+  register: function(lang: string, ft: string): nil
+  get_lang: function(ft: string): string
+end
+
 local record VimLog
   levels: VimLogLevels
 end
 
-local record Vim
-  api: VimApi
-  fn: VimFn
-  keymap: VimKeymap
-  loop: VimLoop
-  opt: VimOptRuntime
-  o: VimOptGlobal
-  wo: VimWo
-  g: VimGlobal
-  opt_local: VimOptLocal
-  bo: VimBo
-  cmd: VimCmd
-  lsp: VimLSP
-  log: VimLog
-  diagnostic: VimDiagnostic
-  tbl_extend: function(behavior: string, dst: {string:any}, src: {string:any}...): {string:any}
-  notify: function(msg: string, level: any | nil, opts: { string: any } | nil | nil...): any
-  pesc: function(str: string): string
+local record VimEnv
+  OPENAI_API_KEY: string | nil
+  COLUMNS: string | nil
+  LINES: string | nil
+end
+
+local record VimNotify
+  notify: function(msg: string, level: integer | nil, opts: any): nil
 end
 
 local type AnyFunction = function(...: any): any
@@ -263,9 +380,9 @@ local M = {
   VimBufInfo          = VimBufInfo,
   VimFn               = VimFn,
   VimKeymap           = VimKeymap,
+  VimLoop             = VimLoop,
   VimOptLocal         = VimOptLocal,
   VimOptGlobal        = VimOptGlobal,
-  VimLoop             = VimLoop,
   VimOptRuntime       = VimOptRuntime,
   VimOptRuntimeRtp    = VimOptRuntimeRtp,
   VimCmd              = VimCmd,
@@ -275,8 +392,12 @@ local M = {
   VimDiagnostic       = VimDiagnostic,
   VimCallback         = VimCallback,
   VimAutocmdOpts      = VimAutocmdOpts,
+  VimUserCommandOpts    = VimUserCommandOpts,
+  VimUserCommandCallback = VimUserCommandCallback,
   VimApi              = VimApi,
   Vim                 = Vim,
+  VimNotify           = VimNotify,
+  VimEnv              = VimEnv,
   VimLog              = VimLog,
   VimRawMapInfo       = VimRawMapInfo,
   VimLSPClientFilter  = VimLSPClientFilter,
@@ -285,6 +406,8 @@ local M = {
   VimCursorPositions  = VimCursorPositions,
   VimWo               = VimWo,
   AnyFunction         = AnyFunction,
+  VimViewOptions      = VimViewOptions,
+  RakhshStateBuffer   = RakhshStateBuffer,
 }
 
 return M

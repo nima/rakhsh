@@ -5,9 +5,9 @@ local T = t.tags.Tags
 local M: t.plugins.PluginModule = {}
 
 local keymaps = {
-  { mode = "n", role = R.Win, key = "<C-F5>", rhs = "<cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
-  { mode = "n", role = R.Win, key = "<C-Space>", rhs = "<cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
-  { mode = "n", role = R.Win, key = "<C-c>", rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-F5>", rhs = "<cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-Space>", rhs = "<cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-c>", rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
 }
 
 local type WhichKeyOpts = { string: any }

@@ -1,16 +1,20 @@
--- Minimal Rakhsh folds: color markers + fold toggle. No Treesitter.
+--+ Minimal Rakhsh folds: color markers + fold toggle. No Treesitter.
 local t = require("core.types")
+local keymaps = require("core.keymaps")
+local R = keymaps.Roles
+local T = keymaps.Tags
 global vim: t.vim.Vim
 
--- Define highlight groups
+--+ Define highlight groups
 local function define_fold_marker_highlights()
   vim.api.nvim_set_hl(0, "FoldMarkerRed",    { fg = "#ff7070", bold = true })
   vim.api.nvim_set_hl(0, "FoldMarkerOrange", { fg = "#ffb86c", bold = true })
 end
 
 local function is_comment_line(buf: integer, lnum: integer): boolean
-  -- Very simple "is this line a comment?" detector:
-  -- Just checks whether the line *starts* with comment syntax.
+  --! TODO: Move this logic to per-language config somewhere
+  --+ Very simple "is this line a comment?" detector:
+  --+ Just checks whether the line *starts* with comment syntax.
   local comment_prefixes: {string:string} = {
     lua = "%s*%-%-",
     python = "%s*#",
@@ -30,12 +34,12 @@ local function is_comment_line(buf: integer, lnum: integer): boolean
   return line:find(pref) ~= nil
 end
 
--- Apply extmarks for markers found inside comments.
+--+ Apply extmarks for markers found inside comments.
 local function apply_markers(buf: integer)
   local ns = vim.api.nvim_create_namespace("rakhsh_folds")
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
-  -- Patterns inside comments only.
+  --+ Patterns inside comments only.
   local markers = {
     { pat = "%-=%{",  hl = "FoldMarkerRed"    }, -- -={
     { pat = "}%=%-",  hl = "FoldMarkerRed"    }, -- }=-
@@ -64,25 +68,25 @@ local function apply_markers(buf: integer)
   end
 end
 
--- Toggle fold delimited by comment markers
+--+ Toggle fold delimited by comment markers
 local function toggle_comment_fold()
   local buf = vim.api.nvim_get_current_buf()
   local cur = vim.api.nvim_win_get_cursor(0)[1]
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-  -- Ensure manual fold mode
+  --+ Ensure manual fold mode
   if vim.wo.foldmethod ~= "manual" then
     vim.wo.foldmethod = "manual"
     vim.cmd("silent! normal! zE")
   end
 
-  -- If already in a fold: toggle it normally.
+  --+ If already in a fold: toggle it normally.
   if vim.fn.foldlevel(cur) > 0 then
     vim.cmd("normal! za")
     return
   end
 
-  -- Search upward for open marker on comment line
+  --+ Search upward for open marker on comment line
   local open_pat = "%-=%s*[{%[]"
   local open_line: integer|nil = nil
   for i = cur, 1, -1 do
@@ -96,7 +100,7 @@ local function toggle_comment_fold()
     return
   end
 
-  -- Search downward for close marker on comment line
+  --+ Search downward for close marker on comment line
   local close_pat = "[}%]]=%-"
   local close_line: integer|nil = nil
   for i = cur, #lines do
@@ -113,7 +117,7 @@ local function toggle_comment_fold()
   vim.cmd(string.format("%d,%dfold", open_line, close_line))
 end
 
--- Autocmd to recolor markers on buffer events
+--+ Autocmd to recolor markers on buffer events
 vim.api.nvim_create_autocmd(
   { "BufReadPost", "BufWritePost", "TextChanged", "TextChangedI", "ColorScheme" },
   {
@@ -128,30 +132,38 @@ vim.api.nvim_create_autocmd(
 local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
-  -- Make sure folds are included in saved views
-  vim.o.viewoptions = vim.o.viewoptions .. ",folds"
+  --+ Make sure viewdir exists so mkview/loadview can actually persist folds
+  local viewdir = vim.fn.stdpath("state") .. "/view"
+  vim.o.viewdir = viewdir
+  vim.fn.mkdir(viewdir, "p")
 
-  -- Auto-save folds (and other view info) when leaving a window
+  --+ Make sure folds are included in saved views
+  vim.opt.viewoptions:append("folds")
+
+  --+ Auto-save folds (and other view info) when leaving a window
   vim.api.nvim_create_autocmd("BufWinLeave", {
     pattern = "*",
     callback = function(_ev): nil
-      -- silent! so it doesn’t complain if it can’t write
-      vim.cmd("silent! mkview")
+      if vim.bo[0].buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+        -- silent! so it doesn’t complain if it can’t write
+        vim.cmd("silent! mkview")
+      end
     end,
   })
 
-  -- Auto-restore folds when re-entering a window
+  --+ Auto-restore folds when re-entering a window
   vim.api.nvim_create_autocmd("BufWinEnter", {
     pattern = "*",
     callback = function(_ev): nil
-      vim.cmd("silent! loadview")
+      if vim.bo[0].buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+        vim.cmd("silent! loadview")
+      end
     end,
   })
 
   define_fold_marker_highlights()
 
-  -- Keybind: toggle fold
-  vim.keymap.set("n", ";", toggle_comment_fold, { desc = "Toggle comment fold" })
+  keymaps.safemap("n", R.Naked, ";", toggle_comment_fold, keymaps.opts("Toggle comment fold", { T.TargetBuffer, T.ActionToggle }))
 end
 
 return M

@@ -80,39 +80,39 @@ vnoremap <M-Down>  4<C-e>
 
 "+ Line Numbers
 function! ToggleNumbers()
-	if !&number && !&relativenumber
-		" none -> absolute
-		set number
-		set norelativenumber
-	elseif &number && !&relativenumber
-		" absolute -> absolute + relative
-		set relativenumber
-	else
-		" (number && relativenumber) or (only relative) -> none
-		set nonumber
-		set norelativenumber
-	endif
+  if !&number && !&relativenumber
+    " none -> absolute
+    set number
+    set norelativenumber
+  elseif &number && !&relativenumber
+    " absolute -> absolute + relative
+    set relativenumber
+  else
+    " (number && relativenumber) or (only relative) -> none
+    set nonumber
+    set norelativenumber
+  endif
 endfunction
 nnoremap <ESC>n :call ToggleNumbers()<CR>
 
 "+ Crosshairs
 function! CycleCursorModes()
-	if &cursorline && &cursorcolumn
-		" H+V → H
-		set nocursorcolumn
-	elseif &cursorline && !&cursorcolumn
-		" H → V
-		set nocursorline
-		set cursorcolumn
-	elseif !&cursorline && &cursorcolumn
-		" V → None
-		set nocursorline
-		set nocursorcolumn
-	else
-		" None → H+V
-		set cursorline
-		set cursorcolumn
-	endif
+  if &cursorline && &cursorcolumn
+    " H+V → H
+    set nocursorcolumn
+  elseif &cursorline && !&cursorcolumn
+    " H → V
+    set nocursorline
+    set cursorcolumn
+  elseif !&cursorline && &cursorcolumn
+    " V → None
+    set nocursorline
+    set nocursorcolumn
+  else
+    " None → H+V
+    set cursorline
+    set cursorcolumn
+  endif
 endfunction
 nnoremap <ESC>. :call CycleCursorModes()<CR>
 " }=-
@@ -159,10 +159,10 @@ set incsearch
 nnoremap <ESC><ESC> :let @/ = ''<CR>
 
 augroup SearchColorOverrides
-	autocmd!
-	autocmd ColorScheme * highlight Search    cterm=underline      ctermfg=208 ctermbg=NONE gui=underline      guifg=#ffaf00 guibg=NONE
-	autocmd ColorScheme * highlight CurSearch cterm=bold,underline ctermfg=208 ctermbg=NONE gui=bold,underline guifg=#ffaf00 guibg=NONE
-	autocmd ColorScheme * highlight IncSearch cterm=NONE           ctermfg=0   ctermbg=208 gui=NONE           guifg=#000000 guibg=#ffaf00
+  autocmd!
+  autocmd ColorScheme * highlight Search    cterm=underline      ctermfg=208 ctermbg=NONE gui=underline      guifg=#ffaf00 guibg=NONE
+  autocmd ColorScheme * highlight CurSearch cterm=bold,underline ctermfg=208 ctermbg=NONE gui=bold,underline guifg=#ffaf00 guibg=NONE
+  autocmd ColorScheme * highlight IncSearch cterm=NONE           ctermfg=0   ctermbg=208 gui=NONE           guifg=#000000 guibg=#ffaf00
 augroup END
 " }=-
 "= """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -173,57 +173,57 @@ autocmd FileType markdown setlocal iskeyword+=-
 "+ Cursor Word
 let g:cursorword_strict = 1
 function! ToggleCursorWordBoundaries() abort
-	let g:cursorword_strict = !get(g:, 'cursorword_strict', 1)
-	echo g:cursorword_strict ? 'CursorWord: Whole' : 'CursorWord: Partial'
+  let g:cursorword_strict = !get(g:, 'cursorword_strict', 1)
+  echo g:cursorword_strict ? 'CursorWord: Whole' : 'CursorWord: Partial'
 endfunction
 nnoremap <ESC>w :call ToggleCursorWordBoundaries()<CR>
 
 let s:word_hl_timer = -1
 
 function! s:ScheduleWordHighlight() abort
-	if s:word_hl_timer != -1
-		call timer_stop(s:word_hl_timer)
-	endif
-	" Run 200ms after the *last* cursor move
-	let s:word_hl_timer = timer_start(200, {-> s:UpdateWordHighlight()})
+  if s:word_hl_timer != -1
+    call timer_stop(s:word_hl_timer)
+  endif
+  " Run 200ms after the *last* cursor move
+  let s:word_hl_timer = timer_start(200, {-> s:UpdateWordHighlight()})
 endfunction
 
 function! s:UpdateWordHighlight() abort
-	" clear previous match
-	if exists('w:cursorword_id')
-		silent! call matchdelete(w:cursorword_id)
-		unlet w:cursorword_id
-	endif
+  " clear previous match
+  if exists('w:cursorword_id')
+    silent! call matchdelete(w:cursorword_id)
+    unlet w:cursorword_id
+  endif
 
-	let l:word = expand('<cword>')
-	if empty(l:word) | return | endif
+  let l:word = expand('<cword>')
+  if empty(l:word) | return | endif
 
-	if get(g:, 'cursorword_strict', 0)
-		let l:pat = '\V\<'.escape(l:word, '\').'\>'
-	else
-		let l:pat = '\V'.escape(l:word, '\')
-	endif
-	let w:cursorword_id = matchadd('CursorWord', l:pat, 10)
+  if get(g:, 'cursorword_strict', 0)
+    let l:pat = '\V\<'.escape(l:word, '\').'\>'
+  else
+    let l:pat = '\V'.escape(l:word, '\')
+  endif
+  let w:cursorword_id = matchadd('CursorWord', l:pat, 10)
 endfunction
 
 augroup WordHighlight
-	autocmd!
-	autocmd CursorMoved,CursorMovedI * call s:ScheduleWordHighlight()
+  autocmd!
+  autocmd CursorMoved,CursorMovedI * call s:ScheduleWordHighlight()
 augroup END
 
 let g:cursorwordhighlight = !get(g:, 'cursorwordhighlight', 1)
 highlight clear CursorWord
 highlight CursorWord cterm=bold,underline gui=bold,underline guifg=NONE guibg=NONE
 function! ToggleCursorWordHighlight() abort
-	highlight clear CursorWord
-	let g:cursorwordhighlight = !get(g:, 'cursorwordhighlight', 0)
-	echo g:cursorwordhighlight ? 'CursorWordHighlight: ON' : 'CursorWordHighlight: OFF'
-	if get(g:, 'cursorwordhighlight', 0)
-		highlight CursorWord cterm=bold,underline gui=bold,underline guifg=NONE guibg=NONE
-		set eventignore-=CursorMoved
-	else
-		set eventignore+=CursorMoved
-	endif
+  highlight clear CursorWord
+  let g:cursorwordhighlight = !get(g:, 'cursorwordhighlight', 0)
+  echo g:cursorwordhighlight ? 'CursorWordHighlight: ON' : 'CursorWordHighlight: OFF'
+  if get(g:, 'cursorwordhighlight', 0)
+    highlight CursorWord cterm=bold,underline gui=bold,underline guifg=NONE guibg=NONE
+    set eventignore-=CursorMoved
+  else
+    set eventignore+=CursorMoved
+  endif
 endfunction
 nnoremap <ESC>h :call ToggleCursorWordHighlight()<CR>
 " }=-
@@ -235,24 +235,24 @@ set rtp+=/opt/github/fzf
 
 " An action can be a reference to a function that processes selected lines
 function! s:build_quickfix_list(lines)
-	call setqflist(map(copy(a:lines), '{ "filename": v:val, "lnum": 1 }'))
-	copen
-	cc
+  call setqflist(map(copy(a:lines), '{ "filename": v:val, "lnum": 1 }'))
+  copen
+  cc
 endfunction
 
 let g:fzf_action = {
-	\'ctrl-q': function('s:build_quickfix_list'),
-	\'ctrl-t': 'tab split',
-	\'ctrl-x': 'split',
-	\'ctrl-v': 'vsplit'
+  \'ctrl-q': function('s:build_quickfix_list'),
+  \'ctrl-t': 'tab split',
+  \'ctrl-x': 'split',
+  \'ctrl-v': 'vsplit'
 \}
 
 ": git clone https://github.com/tpope/vim-fugitive ~/.vim/pack/plugins/start/vim-fugitive
 function! FzfGitGrep()
-	let pat = input('Pattern: ')
-	if !empty(pat)
-		call fzf#vim#grep('git grep -n ' . shellescape(pat), 1, fzf#vim#with_preview())
-	endif
+  let pat = input('Pattern: ')
+  if !empty(pat)
+    call fzf#vim#grep('git grep -n ' . shellescape(pat), 1, fzf#vim#with_preview())
+  endif
 endfunction
 
 "+ Search for files
@@ -307,13 +307,13 @@ let g:ctrlp_custom_ignore = { 'dir':  'extern\|build$', }
 
 " https://clang.llvm.org/docs/ClangFormat.html#vim-integration
 if has('python')
-	nnoremap <C-K> :pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
-	xnoremap <C-K> :pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
-	imap <C-K> <c-o>:pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  nnoremap <C-K> :pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  xnoremap <C-K> :pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  imap <C-K> <c-o>:pyf /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
 elseif has('python3')
-	nnoremap <C-K> :py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
-	xnoremap <C-K> :py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
-	imap <C-K> <c-o>:py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  nnoremap <C-K> :py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  xnoremap <C-K> :py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
+  imap <C-K> <c-o>:py3f /opt/homebrew/Cellar/clang-format/21.1.5/share/clang/clang-format.py<cr>
 endif
 " }=-
 "= """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -349,52 +349,52 @@ highlight default CommentTagDeprecation  ctermfg=196 gui=strikethrough guifg=#FF
 
 "+ Dynamic comment tags for any filetype with a sane 'commentstring'
 function! CommentTagsSetup() abort
-	" Need something concrete, like "// %s", "# %s", "-- %s", "/* %s */", etc.
-	if &commentstring ==# '' || &commentstring !~ '%s' | return | endif
+  " Need something concrete, like "// %s", "# %s", "-- %s", "/* %s */", etc.
+  if &commentstring ==# '' || &commentstring !~ '%s' | return | endif
 
-	let l:cs  = &commentstring
-	let l:idx = stridx(l:cs, '%s')
-	if l:idx < 0 | return | endif
+  let l:cs  = &commentstring
+  let l:idx = stridx(l:cs, '%s')
+  if l:idx < 0 | return | endif
 
-	" Leader is everything before %s, strip trailing spaces
-	let l:leader = strpart(l:cs, 0, l:idx)
-	let l:leader = substitute(l:leader, '\s\+$', '', '')
-	if l:leader ==# '' | return | endif
+  " Leader is everything before %s, strip trailing spaces
+  let l:leader = strpart(l:cs, 0, l:idx)
+  let l:leader = substitute(l:leader, '\s\+$', '', '')
+  if l:leader ==# '' | return | endif
 
-	" Escape for use in a \v pattern and anchor at the leader
-	let l:leader_esc = escape(l:leader, '\/.^$~[]*')
-	let l:prefix     = '\v' . l:leader_esc
+  " Escape for use in a \v pattern and anchor at the leader
+  let l:leader_esc = escape(l:leader, '\/.^$~[]*')
+  let l:prefix     = '\v' . l:leader_esc
 
-	let l:container = 'Comment'
-	if &filetype ==# 'vim'
-		let l:container = 'vimLineComment,vimComment'
-	elseif &filetype ==# 'cpp' || &filetype ==# 'c'
-		let l:container = 'cComment,cCppComment'
-	elseif &filetype ==# 'python'
-		let l:container = 'pythonComment'
-	elseif &filetype ==# 'sh' || &filetype ==# 'bash' || &filetype ==# 'zsh'
-		let l:container = 'shComment'
-	endif
+  let l:container = 'Comment'
+  if &filetype ==# 'vim'
+    let l:container = 'vimLineComment,vimComment'
+  elseif &filetype ==# 'cpp' || &filetype ==# 'c'
+    let l:container = 'cComment,cCppComment'
+  elseif &filetype ==# 'python'
+    let l:container = 'pythonComment'
+  elseif &filetype ==# 'sh' || &filetype ==# 'bash' || &filetype ==# 'zsh'
+    let l:container = 'shComment'
+  endif
 
-	" One leader, different tag chars; all restricted to comments
-	execute 'syntax match CommentTagTitle       /' . l:prefix . '\=\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagExplanatory /' . l:prefix . '\+\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagStaged      /' . l:prefix . '\:\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagReasoning   /' . l:prefix . '\?\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagUpstream    /' . l:prefix . '\<\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagDownstream  /' . l:prefix . '\>\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagExamples    /' . l:prefix . '\&\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagAttention   /' . l:prefix . '\!\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagNotice      /' . l:prefix . '\-\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagReference   /' . l:prefix . '\@\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagCost        /' . l:prefix . '\$\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagONotation   /' . l:prefix . '\%\s.*$/  containedin=' . l:container
-	execute 'syntax match CommentTagDeprecation /' . l:prefix . '\~\s.*$/  containedin=' . l:container
+  " One leader, different tag chars; all restricted to comments
+  execute 'syntax match CommentTagTitle       /' . l:prefix . '\=\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagExplanatory /' . l:prefix . '\+\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagStaged      /' . l:prefix . '\:\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagReasoning   /' . l:prefix . '\?\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagUpstream    /' . l:prefix . '\<\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagDownstream  /' . l:prefix . '\>\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagExamples    /' . l:prefix . '\&\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagAttention   /' . l:prefix . '\!\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagNotice      /' . l:prefix . '\-\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagReference   /' . l:prefix . '\@\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagCost        /' . l:prefix . '\$\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagONotation   /' . l:prefix . '\%\s.*$/  containedin=' . l:container
+  execute 'syntax match CommentTagDeprecation /' . l:prefix . '\~\s.*$/  containedin=' . l:container
 endfunction
 
 augroup CommentTags
-	autocmd!
-	autocmd FileType * call CommentTagsSetup()
+  autocmd!
+  autocmd FileType * call CommentTagsSetup()
 augroup END
 " }=-
 "= """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -409,7 +409,7 @@ augroup END
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " WordWrap
 "function! WrapWordWithAngleBrackets()
-"	let l:word = expand('<cword>')
-"	execute 'normal! "_diwi<' . l:word . '>'
+"  let l:word = expand('<cword>')
+"  execute 'normal! "_diwi<' . l:word . '>'
 "endfunction
 "nnoremap <Leader>w :call WrapWordWithAngleBrackets()<CR>

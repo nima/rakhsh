@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+export PATH="/opt/homebrew/bin:${PATH}"
+
+REQUIRED=(nvim timeout)
+for req in "${REQUIRED[@]}"; do
+  _=$(command -v timeout) || exit 9
+done
+
 export TERM='xterm-256color'
 export PS4='+ ${BASH_SOURCE}:${LINENO} ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-export PATH="/opt/homebrew/bin:${PATH}"
 NVIM="$(command -v nvim)"
 
 export NVIM_APPNAME=rakhsh
@@ -37,25 +43,29 @@ function :debug() {
 }
 
 function :vsc() {
+  # VS Code CLI must exist
   [[ -x "${vscode}" ]] || return 0
 
-  # code --reuse-window --goto "$(realpath "$1")"
-  local -a tokens
+  # Only do anything if VS Code is already running
+  pgrep -qf "Code" >/dev/null 2>&1 || return 0
+
+  # Normalize arguments to absolute file paths and strip any :ln[:col] suffix
+  local -a files=()
+  local token path
   for token in "$@"; do
-    tokens+=( "$(realpath "${token}")" )
+    path="${token}"
+    if [[ "${path}" =~ ^(.*):([0-9]+)(:[0-9]+)?$ ]]; then
+      path="${BASH_REMATCH[1]}"
+    fi
+    path="$(realpath "${path}")" || continue
+    files+=( "${path}" )
   done
-  open -g -a "Visual Studio Code" --args --reuse-window --goto "${tokens[@]}"
 
-  if [ $# -eq 1 ]; then
-    me="$(osascript -e 'tell application "System Events" to get name of first process whose frontmost is true')"
-    osascript\
-      -e 'tell application "Visual Studio Code" to activate'\
-      -e 'tell application "System Events" to keystroke "t" using {command down, option down}'\
-    ;
-  fi
+  (( ${#files[@]} > 0 )) || return 0
 
-  osascript -e "tell application \"$me\" to activate"
-  return $?
+  # Do not steal focus / switch desktop
+  open -g -a "Visual Studio Code" "${files[@]}" >/dev/null 2>&1 || true
+  return 0
 }
 
 function :socket() {
@@ -98,6 +108,9 @@ function :kill() {
 }
 
 function :boot() {
+  read -e LINES COLUMNS < <(stty size 2>/dev/null)
+  export LINES COLUMNS
+
   :alive && :healthy && return 0
 
   local pid
@@ -124,23 +137,13 @@ function :pid() {
 }
 
 function :attach() {
-  # iTerm semantic history passes "<file>[:<line>[:<col>]]" as one string.
-  local file ln col _
-  local -a tokens
-  local clicked=0
-  if [[ "$1" == '--iterm' ]]; then
-    #+ Mode: iTerm
-    cd "$2" || return 99
-    let clicked=1
-    tokens+=( "${3}" )
-  elif [[ "$#" -ge 1 ]]; then
-    #+ Mode: CLI
-    tokens+=( "$@" )
-  fi
+  #local COLUMNS=$(tput cols 2>/dev/null)
+  #local LINES=$(tput lines 2>/dev/null)
+  local clicked=$1
+  shift
 
-  [[ ${#tokens[@]} -gt 0 ]] || return 0
-
-  #> :vsc "${tokens[@]}"
+  local -a tokens=( "$@" )
+  [[ $# -eq 0 ]] || ( :vsc "${tokens[@]}" )&
 
   local tui tui_attached=0
   tui=$("$NVIM" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null || echo "")
@@ -148,31 +151,12 @@ function :attach() {
     tui_attached=1
   fi
 
-  local first=1
+  [[ ${#tokens[@]} -gt 0 ]] || return 0
+
+  local token
   for token in "${tokens[@]}"; do
-    IFS=':' read -r file ln col _ <<< "${token}"
-
-    local cmd
-    if (( tui )); then
-      cmd="tabedit"
-    else
-      if (( first )); then
-        cmd="edit"
-      else
-        cmd="tabedit"
-      fi
-    fi
-    echo "$tui,$tui_attached,$first -> $cmd"
-
-    first=0
-    if [[ $ln =~ ^[0-9]+$ ]]; then
-      [[ $col =~ ^[0-9]+$ ]] || col=1
-      "$NVIM" --headless --server "${socket}" \
-        --remote-send "<Cmd>${cmd} ${file} | call cursor(${ln},${col})<CR>" || return 11
-    else
-      "$NVIM" --headless --server "${socket}" \
-        --remote-send "<Cmd>${cmd} ${file}<CR>" || return 11
-    fi
+    echo "${token}" >> /tmp/x
+    "$NVIM" --headless --server "${socket}" --remote-send "<Cmd>RakhshOpen ${token}<CR>" || return 11
   done
 
   return 0
@@ -191,18 +175,22 @@ function :same() {
   return $?
 }
 
-function :ui() {
+function :mirror.exec() {
+  exec nvim --server "${socket}" --remote-ui
+}
+
+function :tui() {
   local attached
   attached=$("$NVIM" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null)
   [[ $? -eq 0 ]] || return 14
   (( attached == 0 )) && return 15 || return 0
 }
 
-function :ui.exec() {
+function :tui.exec() {
   # Require a healthy headless server before we even consider a UI.
   :healthy || return $?
 
-  :ui
+  :tui
   local e=$?
   case $e in
     0)
@@ -210,20 +198,22 @@ function :ui.exec() {
       # Do not try to grab UI again; files were already attached via :attach.
       return 0
       ;;
-    14)
-      # :ui could not query the server; fall back to legacy session-based logic.
-      ;;
-    15)
-      # No UI is currently attached: this terminal may become the UI owner.
+	14|15)
+      # Either we couldn't query UIs, or there are none yet.
+      # In both cases, this terminal may become the UI owner.
       [[ -t 1 ]] || return 0
       exec "$NVIM" --server "${socket}" --remote-ui
       ;;
     *)
-      # Unexpected status from :ui; propagate it as an error.
+      # Unexpected status from :tui; propagate it as an error.
       return $e
       ;;
   esac
 }
+
+function :e(){ keyhex=($(echo -n "$1" | xxd -p -c1)); i=0; xxd -p -c1 | while read -r b; do k=${keyhex[$((i%${#keyhex[@]}))]}; printf "%02x\n" $((0x$b ^ 0x$k)); ((i++)); done | xxd -r -p | base64; }
+
+function :d(){ keyhex=($(echo -n "$1" | xxd -p -c1)); i=0; base64 -d | xxd -p -c1 | while read -r b; do k=${keyhex[$((i%${#keyhex[@]}))]}; printf "%02x\n" $((0x$b ^ 0x$k)); ((i++)); done | xxd -r -p; }
 
 function :wait.block() {
   local i=0 max=40
@@ -254,7 +244,7 @@ elif [[ -n "${TESTING}" ]]; then
   :alive;        echo "    alive          [1] | [2]:     $?"  #+ 1 from :socket
   :healthy;      echo "  healthy          [1] | [2]:     $?"  #+ 1 from :socket, 2 from :alive
  #:headless;     echo " headless           [] | []:      $?"
-  :ui.exec;      echo "  ui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
+  :tui.exec;     echo " tui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
   :kill ${sv};   echo "     kill           [] | [6]:     $?"
   :boot;         echo "     boot          [6] | []:      $?"  #+ 6 from :kill
   :pid;          echo "      pid          [1] | [8,9]:   $?"  #+ 1 from :socket
@@ -263,7 +253,22 @@ elif [[ -n "${TESTING}" ]]; then
   :debug
 else
   :boot
-  [[ "$#" -eq 0 ]] || :attach "$@"
-  :ui.exec  # MAY exec into UI (and writes session on first TTY)
+  if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
+    #+ Mode: CLI
+    :mirror.exec
+  elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
+    #+ Mode: iTerm
+    cd "$2" || exit 99
+    let clicked=1
+    :attach ${clicked} "${3}"
+    :tui.exec  # MAY exec into UI (and writes session on first TTY)
+  elif [[ $# -eq 1 ]] && [[ "$1" == '--status' ]] && [[ -S "${socket}" ]]; then
+    "${NVIM}" --server "${socket}" --headless --remote-expr "luaeval('require(\"core.status\").status_summary()')" +qa
+  else
+    #+ Mode: CLI
+    let clicked=0
+    :attach ${clicked} "$@"
+    :tui.exec  # MAY exec into UI (and writes session on first TTY)
+  fi
   exit $?
 fi

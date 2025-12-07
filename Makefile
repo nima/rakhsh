@@ -9,6 +9,8 @@ MAGENTA := \033[1;35m
 CYAN    := \033[1;36m
 ENDC    := \033[0m
 
+SHELL    := $(shell command -v bash)
+
 black   = $(shell echo "$(BLACK)$(1)$(ENDC)")
 red     = $(shell echo "$(RED)$(1)$(ENDC)")
 green   = $(shell echo "$(GREEN)$(1)$(ENDC)")
@@ -21,21 +23,26 @@ good  = $(shell echo "$(GREEN)$(1)$(ENDC)")
 bad   = $(shell echo "$(RED)$(1)$(ENDC)")
 ugly  = $(shell echo "$(UGLY)$(1)$(ENDC)")
 
-luarocks_t = $(shell echo "[$(CYAN)LuaRocks$(ENDC)]")
-brew_t     = $(shell echo "[$(YELLOW)Brew$(ENDC)]")
-npm_t      = $(shell echo "[$(GREEN)NPM$(ENDC)]")
-
-cache = $(shell mkdir -p /tmp/rakhsh; echo "/tmp/rakhsh.$(1)")
+luarocks_t = $(shell echo   "[$(CYAN)LuaRocks$(ENDC)]")
+brew_t     = $(shell echo "[$(YELLOW)HomeBrew$(ENDC)]")
+npm_t      = $(shell echo  "[$(GREEN)NdPkgMgr$(ENDC)]")
 
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
 
-RAKHSH        := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
+cache = $(shell mkdir -p /tmp/$(NVIM_APPNAME); echo "/tmp/rakhsh.$(1)")
+
+ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
+ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
+
 RAKHSH_CONFIG := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
 RAKHSH_DATA   := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
 RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
 RAKHSH_CACHE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
 RAKHSH_SOCKET := $(RAKHSH_STATE)/server.pipe
+RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
+RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
+RAKHSH_ZSHRC  := $(PWD)/dot.d/dot.zshrc
 
 brew     := $(shell command -v brew || exit 2)
 luarocks := $(shell command -v luarocks || exit 1)
@@ -63,6 +70,28 @@ define brew-install
 	  printf "$(brew_t) Installing %s...\n" "$1";\
 	  $(brew) install $1;\
 	  touch $(BREW_DIRTY);\
+	fi
+endef
+
+BREWCASK_DIRTY     := $(call cache,BREWCASK_DIRTY)
+BREWCASK_INSTALLED := $(call cache,BREWCASK_INSTALLED)
+BREWCASK_OUTDATED  := $(call cache,BREWCASK_OUTDATED)
+${BREWCASK_INSTALLED}:; @$(brew) list --casks > $@
+${BREWCASK_OUTDATED}:; @$(brew) outdated --cask > $@
+define brew-cask-install
+	@$(brew) tap $1 >/dev/null 2>&1 || true;\
+	if grep -Fqw $2 $(BREWCASK_INSTALLED) 2>/dev/null; then\
+	  if grep -Fqw $2 $(BREWCASK_OUTDATED) 2>/dev/null; then\
+	    printf "$(brew_t) Upgrading cask %s...\n" "$2";\
+	    $(brew) upgrade --cask $2;\
+	    touch $(BREWCASK_DIRTY);\
+	  else\
+	    printf "$(brew_t) cask %s...$(call good,GOOD)\n" "$2";\
+	  fi;\
+	else\
+	  printf "$(brew_t) Installing cask %s...\n" "$2";\
+	  $(brew) install --cask $2;\
+	  touch $(BREWCASK_DIRTY);\
 	fi
 endef
 
@@ -108,10 +137,10 @@ define npm-install
 	fi
 endef
 
-installed: $(BREW_INSTALLED) $(LUAROCKS_INSTALLED) $(NPM_INSTALLED)
+installed: $(BREW_INSTALLED) $(BREWCASK_INSTALLED) $(LUAROCKS_INSTALLED) $(NPM_INSTALLED)
 .PHONY: installed
 
-outdated: $(BREW_OUTDATED) $(LUAROCKS_OUTDATED) $(NPM_OUTDATED)
+outdated: $(BREW_OUTDATED) $(BREWCASK_INSTALLED) $(LUAROCKS_OUTDATED) $(NPM_OUTDATED)
 .PHONY: outdated
 
 upgrade: dependencies
@@ -124,7 +153,6 @@ post-install-cleanup = [ ! -e "$($(1)_DIRTY)" ] || rm -f "$($(1)_DIRTY)" "$($(1)
 caches: /opt/homebrew/.git/HEAD
 /tmp/.nonce: /opt/homebrew/.git/HEAD
 	@$(call post-install-cleanup,BREW)
-
 	@touch -r /opt/homebrew/.git/HEAD $@
 /opt/homebrew/.git/HEAD:
 .PHONY: caches
@@ -134,6 +162,7 @@ dependencies: caches installed outdated
 	@$(call brew-install,coreutils)
 	@$(call brew-install,neovim)
 	@$(call brew-install,neovim-remote)
+	@$(call brew-cask-install,homebrew/cask-fonts,font-jetbrains-mono-nerd-font)
 	@#= CLI
 	@$(call brew-install,fd)
 	@$(call brew-install,rsync)
@@ -157,120 +186,140 @@ dependencies: caches installed outdated
 	@#= Markdown
 	@$(call brew-install,marksman)                #+ Python LSP
 	@#= Internal
+	@$(call post-install-cleanup,BREWCASK)
 	@$(call post-install-cleanup,BREW)
 	@$(call post-install-cleanup,LUAROCKS)
 	@$(call post-install-cleanup,NPM)
 .PHONY: dependencies
 
 pre-validate: src/tl dependencies
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
 	@set -e; for f in $$(rg -g '*.tl' --files); do $(tlchk) -I$< "$$f"; done
 .PHONY: pre-validate
 
 build: pre-validate
-	$(info [$(call blue,$@)])
+	@echo -e "[$(call blue,$@)]"
 	@rm -rf build
 	@mkdir -p build
-	@cyan build --prune
+	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
 	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ build/lua/
 .PHONY: build
 
 iTerm2.regex:; @jq -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
 iTerm2:
-	$(info [$(call green,$@)])
+	@echo -e "[$(call green,$@)]"
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
-install: $(RAKHSH) build iTerm2
-	$(info [$(call green,$@)])
-sync: $(RAKHSH)
-	$(info [$(call green,$@)])
-$(RAKHSH): build
+link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
+.PHONY: link
+
+splash:
+	@cat src/data/header.txt > $(RAKHSH_SPLASH)
+	@cat src/data/message.txt | libexec/d >> $(RAKHSH_SPLASH)
+	@cat src/data/support.txt >> $(RAKHSH_SPLASH)
+.PHONY: splash
+
+$(RAKHSH_LAZY):; @bin/rx
+install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
+	@echo -e "[$(call green,$@)]"
+.PHONY: install
+
+$(RAKHSH_CONFIG): build
 	@#rsync -ai --info=NAME0 --delete $</ $@/
 	@rsync -a --info=NAME0 --delete $</ $@/
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
-.PHONY: install
+
+sync: $(RAKHSH_CONFIG) link splash
+	@echo -e "[$(call green,$@)]"
 .PHONY: sync
 
-post-validate: install
-	$(info [$(call magenta,$@)])
-	@$(nvim) --headless +'lua print(vim.inspect(vim.fn.maparg("K", "n", false, true)))' +qa
-	@$(nvim) --headless "+lua local ok,u = pcall(require,'core.utils');\
-	  if not ok then error('Rakhsh post-validate: require(\"core.utils\") failed: '..tostring(u)) end;\
-	  if type(u.validate_keymaps) ~= 'function' then\
-	    error('Rakhsh post-validate: core.utils.validate_keymaps() is not implemented (dev TODO)');\
-	  end;\
-	  u.validate_keymaps()" \
-	+qa
-	@#$(nvim) --headless -u $(RAKHSH)/init.lua "+quit" || exit 1
-	@#$(nvim) --headless -u $(RAKHSH)/init.lua "+checkhealth" "+qa" > /tmp/nvim.log
-	@#grep "ERROR" /tmp/nvim.log && exit 1 || exit 0
-	@#$(find) $(RAKHSH) -type f -name "*.lua" -print0\
-		| xargs -0 -I{} $(nvim) --headless -c "luafile {}" -c "qa"\
-		|| exit 1
-.PHONY: post-validate
+purgeinstall: purge install
+.PHONY: purgeinstall
 
-
-reinstall: uninstall clean post-validate
+reinstall: uninstall install
 .PHONY: reinstall
 
-ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
-ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
-uninstall:
-	$(info [$(call black,$@)])
+unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
+.PHONY: unlink
+
+uninstall: clean unlink
+	@echo -e "[$(call black,$@)]"
 	rm -f "$(ITERM2_DYN_PROF)"
-	rm -rf $(RAKHSH)
+	rm -rf $(RAKHSH_CONFIG)
 	rm -f ~/bin/rx
 .PHONY: uninstall
 
-purge: clean uninstall
-	$(info [$(call black,$@)])
+purge: uninstall
+	@echo -e "[$(call black,$@)]"
 	rm -rf $(RAKHSH_DATA)
 	rm -rf $(RAKHSH_CONFIG)
 	rm -rf $(RAKHSH_SOCKET)
 .PHONY: purge
 
 clean:
-	$(info [$(call yellow,$@)])
+	@echo -e "[$(call yellow,$@)]"
 	rm -rf build
 .PHONY: clean
 
 ################################################################################
 
 ide: reinstall
-	$(info [$(call yellow,$@)])
-	$(info [$(call green,$@)])
+	@echo -e "[$(call yellow,$@)]"
+	@echo -e "[$(call green,$@)]"
 	$(rx)
 
 lazy:
-	$(info [$(call magenta,$@)])
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
+	@echo -e "[$(call magenta,$@)]"
 	lsd --tree "$$($(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"), "\n")' +qa)/lazy"
 
 ls-files:
-	$(info [$(call magenta,$@)])
-	$(info Typed TEAL)
+	@echo -e "[$(call magenta,$@:Teal)]"
 	@lsd --tree src/tl
 ls-files.user:
-	$(info [$(call magenta,$@)])
-	$(info Installed LUA)
+	@echo -e "[$(call magenta,$@:Lua)]"
 	@lsd --tree "$(RAKHSH_CONFIG)"
 .PHONY: ls-files ls-files.user
 
-state: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
-state:
-	$(info [$(call magenta,$@)])
+status: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
+status:
+	@echo -e "[$(call magenta,$@)]"
 	@printf "%-24s" "Socket:"
-	@[ -e $(RAKHSH_SOCKET) ] && echo "$(call green,$(RAKHSH_SOCKET))" || echo "$(call black,$(RAKHSH_SOCKET))"
+	@[ -e $(RAKHSH_SOCKET) ] && echo -e "$(call green,$(RAKHSH_SOCKET))" || echo -e "$(call black,$(RAKHSH_SOCKET))"
 	@printf "%-24s" "PID:"
-	@[ -n "$(pid)" ] && echo "$(call green,$(pid))" || echo "$(call black,000)"
+	@[ -n "$(pid)" ] && echo -e "$(call green,$(pid))" || echo -e "$(call black,000)"
 	@printf "%-24s" "Buffers:"
 	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || n=$$(nvim --server $(RAKHSH_SOCKET) --headless --remote-expr "len(getbufinfo({'buflisted':1}))"); echo "$$n"
-.PHONY: state
+	@n=0; [ ! -S $(RAKHSH_SOCKET) ] || {\
+		printf "%-24s" "Status:";\
+		read -r f t u <<<$$(rx --status);\
+		echo -ne "f:$(BLUE)$${f}$(ENDC)";\
+		printf " ";\
+		echo -ne "t:$(YELLOW)$${t}$(ENDC)";\
+		printf " ";\
+		echo -ne "u:$(BLACK)$${u}$(ENDC)";\
+		echo;\
+	}
+.PHONY: status
 
 killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 killsocket:
-	$(info [$(call magenta,$@)])
+	@echo -e "[$(call magenta,$@)]"
 	kill -9 $(pid)
+
+export PROPAGANDA := rakhsh 
+export FIGLET_FONTDIR := /opt/homebrew/share/figlet/fonts/
+figlet:; @$(foreach f,$(wildcard $(FIGLET_FONTDIR)*.flf),name=$(notdir $(f:%.flf=%));echo;echo "$$name";figlet -f $(f) $${PROPAGANDA:-$${name}};)
+.PHONY: figlet
+
+fonts:
+	sudo rm -rf /Library/Fonts/*Cache*
+	sudo rm -rf /System/Library/Fonts/*Cache*
+	rm -rf ~/Library/Fonts/*Cache*
+	rm -rf ~/Library/Caches/com.apple.FontServices
+	rm -rf ~/Library/Caches/com.apple.coretext*
+	sudo rm -rf /Library/Caches/com.apple.FontServices*
+	sudo rm -rf /Library/Caches/com.apple.coretext*
