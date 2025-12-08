@@ -29,13 +29,13 @@ end
 local On = t.plugins.KeymapEvents
 function M.lazy(): PluginSpec
   local plugin_keymaps: {PluginKeymap} = {
-    { mode = "n", role = R.Go,     key = "gd", rhs = vim.lsp.buf.definition, on = On.Attach, desc = "LSP: goto definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.Go,     key = "gD", rhs = vim.lsp.buf.declaration, on = On.Attach, desc = "LSP: goto declaration", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.Go,     key = "gI", rhs = vim.lsp.buf.implementation, on = On.Attach, desc = "LSP: goto implementation", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.Go,     key = "gr", rhs = vim.lsp.buf.references, on = On.Attach, desc = "LSP: references", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.Go,     key = "gt", rhs = vim.lsp.buf.type_definition, on = On.Attach, desc = "LSP: goto type definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.GoVia,  key = "gi", rhs = "<cmd>Telescope lsp_incoming_calls<CR>", on = On.Attach, desc = "LSP: incoming calls", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
-    { mode = "n", role = R.GoVia,  key = "go", rhs = "<cmd>Telescope lsp_outgoing_calls<CR>", on = On.Attach, desc = "LSP: outgoing calls", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.Go,      key = "d", rhs = vim.lsp.buf.definition, on = On.Attach, desc = "LSP: goto definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.Go,      key = "D", rhs = vim.lsp.buf.declaration, on = On.Attach, desc = "LSP: goto declaration", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.Go,      key = "I", rhs = vim.lsp.buf.implementation, on = On.Attach, desc = "LSP: goto implementation", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.Go,      key = "r", rhs = vim.lsp.buf.references, on = On.Attach, desc = "LSP: references", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.Go,      key = "t", rhs = vim.lsp.buf.type_definition, on = On.Attach, desc = "LSP: goto type definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.GoVia,   key = "i", rhs = "<cmd>Telescope lsp_incoming_calls<CR>", on = On.Attach, desc = "LSP: incoming calls", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
+    { mode = "n", role = R.GoVia,   key = "o", rhs = "<cmd>Telescope lsp_outgoing_calls<CR>", on = On.Attach, desc = "LSP: outgoing calls", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.LSPInfo, key = "H",  rhs = vim.lsp.buf.hover, on = On.Attach, desc = "LSP: hover", tags = { T.ActionHelp, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.LSPInfo, key = "s",  rhs = vim.lsp.buf.signature_help, on = On.Attach, desc = "LSP: signature help", tags = { T.ActionHelp, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.LSPEdit, key = "f",  rhs = function() vim.lsp.buf.format({ async = true }) end, on = On.Attach, desc = "LSP: format", tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer } },
