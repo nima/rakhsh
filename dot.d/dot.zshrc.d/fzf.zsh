@@ -1,6 +1,3 @@
-if [[ ! "$PATH" == */Users/k34446/.fzf/bin* ]]; then
-  PATH="${PATH:+${PATH}:}/Users/k34446/.fzf/bin"
-fi
 source <(fzf --zsh)
 
 fzf-rg-search-widget() {
@@ -62,5 +59,3 @@ fzf-git-grep-p-widget() {
 }
 zle -N fzf-git-grep-p-widget
 bindkey '^G' fzf-git-grep-p-widget
-
-export FZF_CTRL_T_COMMAND='fd . --type f --hidden --follow --exclude .git -x stat -f "%m %N" | sort -rn | cut -d" " -f2-'
