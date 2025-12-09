@@ -5,7 +5,6 @@ local R = keymaps.Roles;
 local T = keymaps.Tags;
 global vim: t.vim.Vim
 
-local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
 local M: t.plugins.PluginModule = {}
@@ -27,7 +26,7 @@ local record CmpLspModule
 end
 
 local On = t.plugins.KeymapEvents
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   local plugin_keymaps: {PluginKeymap} = {
     { mode = "n", role = R.Go,      key = "d", rhs = vim.lsp.buf.definition, on = On.Attach, desc = "LSP: goto definition", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
     { mode = "n", role = R.Go,      key = "D", rhs = vim.lsp.buf.declaration, on = On.Attach, desc = "LSP: goto declaration", tags = { T.ActionView, T.BasisSymbol, T.TargetBuffer } },
@@ -76,7 +75,7 @@ function M.lazy(): PluginSpec
         end,
       })
     end,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

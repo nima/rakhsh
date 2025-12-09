@@ -1,14 +1,21 @@
 require("core.rakhsh")
 require("core.options")
 
-local terminal = require("core.terminal")
-terminal.init()
+local telescope = require("core.telescope")
+telescope.init()
 
 local cursor = require("core.cursor")
 cursor.init()
 
+local hotkeys = require("core.hotkeys")
+hotkeys.init()
+
+local terminal = require("core.terminal")
+terminal.init()
+
 require("core.plugins").init({
   "plugins.lsp",        -- LSP
+  "plugins.navigation", -- Navigation (which-key)
   "plugins.visuals",    -- Colorschemes, special comments, syntax highlighting
   "plugins.cmp",        -- Autocomplete
   "plugins.telescope",  -- Telescope
@@ -19,7 +26,6 @@ require("core.plugins").init({
   "plugins.fsh",        -- Filesyste Hierarchy
   "plugins.llm",        -- Large Language Models (DeepSeek, etc.)
   "plugins.md",         -- Markdown
-  "plugins.hotkeys",    -- Hotkeys (Ad-Hoc shortcuts and WhichKey cheatsheets)
   "plugins.folds",      -- Special Comment Folds
   "plugins.lint",       -- Lint
   "plugins.observer",   -- Observer

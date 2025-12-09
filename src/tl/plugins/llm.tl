@@ -22,8 +22,7 @@ local function guard(cmd: string): string|function
   return err
 end
  
-local type PluginSpec = t.plugins.PluginSpec
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   local km = {
     { mode = "n", role = R.AI, key = "c", rhs = guard("<cmd>ChatGPT<CR>"),
       desc = "ChatGPT: main chat window",
@@ -80,6 +79,7 @@ function M.lazy(): PluginSpec
       tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
       on = On.Immediate },
   }
+
   return {
     "jackMort/ChatGPT.nvim",
     lazy = false,
@@ -100,7 +100,7 @@ function M.lazy(): PluginSpec
       local chatgpt = (require(_mod) as ChatGPT)
       chatgpt.setup({ openai_params = { model = "gpt-5.1-mini", }, })
     end,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

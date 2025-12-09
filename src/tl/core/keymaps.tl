@@ -1,13 +1,36 @@
 local t = require("core.types")
+local hotkeys = require("core.hotkeys")
+
+local record RakhshMapOpts
+  noremap: boolean
+  silent: boolean
+  desc: string
+  tags_raw: {t.tags.Tag}
+end
 
 global vim: t.vim.Vim
 
 local record KeymapModule
   Roles: {string : t.roles.Role}
   Tags:  {string : t.tags.Tag}
-  safemap: function(mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
-  safemap_buf: function(bufnr: integer, mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
-  opts: function(desc: string | nil, tags: {t.tags.Tag}): t.vim.VimMapOpts
+  safemap: function(
+    mode: string,
+    role: t.roles.Role,
+    key: string,
+    rhs: any,
+    opts: RakhshMapOpts
+  ): nil
+
+  safemap_buf: function(
+    bufnr: integer,
+    mode: string,
+    role: t.roles.Role,
+    key: string,
+    rhs: any,
+    opts: RakhshMapOpts
+  ): nil
+
+  opts: function(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
 end
 
 local M: KeymapModule = {
@@ -69,7 +92,7 @@ local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean
   return false
 end
 
-local function collisions(_existing: t.vim.VimRawMapInfo | nil, mode: string, lhs: string, rhs: any, opts: t.vim.VimMapOpts): nil
+local function collisions(_existing: t.vim.VimRawMapInfo | nil, mode: string, lhs: string, rhs: any, opts: RakhshMapOpts): nil
   if _existing == nil then return end
 
   local existing = _existing as t.vim.VimRawMapInfo
@@ -108,23 +131,88 @@ local function find_buf_map(bufnr: integer, mode: string, lhs: string): t.vim.Vi
   return nil
 end
 
-function M.safemap(mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
+function M.safemap(
+  mode: string,
+  role: t.roles.Role,
+  key: string,
+  rhs: any,
+  opts: RakhshMapOpts
+): nil
   local lhs = mklhs(mode, role, key)
   local existing = vim.fn.maparg(lhs, mode, false, true) as t.vim.VimRawMapInfo
   collisions(existing, mode, lhs, rhs, opts)
-  vim.keymap.set(mode, lhs, rhs, opts)
+
+  -- extract and strip our custom metadata before passing to nvim
+  local opts_tbl = opts as {string : any}
+  local tags = opts_tbl.tags_raw as {t.tags.Tag}
+  if tags == nil then
+    error("safemap: opts.tags_raw must be provided (use keymaps.opts)")
+  end
+  opts_tbl.tags_raw = nil
+
+  vim.keymap.set(mode, lhs, rhs, opts as t.vim.VimMapOpts)
+
+  local rhs_str: string
+  if type(rhs) == "string" then
+    rhs_str = rhs as string
+  else
+    rhs_str = "<lua>"
+  end
+
+  hotkeys.register({
+    mode = mode,
+    role = role,
+    key = lhs,
+    rhs = rhs_str,
+    desc = opts.desc,
+    tags = tags,
+    group = nil,
+  })
 end
 
-function M.safemap_buf(bufnr: integer, mode: string, role: t.roles.Role, key: string, rhs: any, opts: t.vim.VimMapOpts): nil
+function M.safemap_buf(
+  bufnr: integer,
+  mode: string,
+  role: t.roles.Role,
+  key: string,
+  rhs: any,
+  opts: RakhshMapOpts
+): nil
   local lhs = mklhs(mode, role, key)
   local existing: t.vim.VimRawMapInfo | nil = find_buf_map(bufnr, mode, lhs)
   collisions(existing, mode, lhs, rhs, opts)
-  local merged = vim.tbl_extend("force", (opts as {string : any}), { buffer = bufnr } as {string : any})
+
+  -- extract and strip our custom metadata before passing to nvim
+  local opts_tbl = opts as {string : any}
+  local tags = opts_tbl.tags_raw as {t.tags.Tag}
+  if tags == nil then
+    error("safemap_buf: opts.tags_raw must be provided (use keymaps.opts)")
+  end
+  opts_tbl.tags_raw = nil
+
+  local merged = vim.tbl_extend("force", opts_tbl, { buffer = bufnr } as {string : any})
   vim.keymap.set(mode, lhs, rhs, merged as t.vim.VimMapOpts)
+
+  local rhs_str: string
+  if type(rhs) == "string" then
+    rhs_str = rhs as string
+  else
+    rhs_str = "<lua>"
+  end
+
+  hotkeys.register({
+    mode = mode,
+    role = role,
+    key = lhs,
+    rhs = rhs_str,
+    desc = (merged as t.vim.VimMapOpts).desc,
+    tags = tags,
+    group = nil,
+  })
 end
 
-function M.opts(desc: string | nil, tags: {t.tags.Tag}): t.vim.VimMapOpts
-  local effective_desc = desc or ""
+function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
+  local effective_desc = desc
 
   local rendered: {string} = {}
 
@@ -143,10 +231,11 @@ function M.opts(desc: string | nil, tags: {t.tags.Tag}): t.vim.VimMapOpts
     effective_desc = ("[%s]"):format(tag_str)
   end
 
-  local out: t.vim.VimMapOpts = {
+  local out: RakhshMapOpts = {
     noremap = true,
     silent  = true,
     desc    = effective_desc,
+    tags_raw = tags,
   }
 
   return out

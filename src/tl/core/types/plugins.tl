@@ -25,11 +25,14 @@ end
 setmetatable(PluginKeymap, { __newindex = function() error("Cannot add new enum values to PluginKeymap") end })
 
 local record PluginSpec
-  repo: string                -- the plugin name / repo
+  repo: string
   lazy: boolean | nil
   keymaps: { PluginKeymap } | nil
 end
 local record KeymapSpec
+  keymaps: { PluginKeymap }
+end
+local record KeymapModule
   keymaps: { PluginKeymap }
 end
 local record PluginModule
@@ -44,6 +47,7 @@ local M = {
   KeymapOn     = KeymapOn,
   KeymapEvents = KeymapEvents,
   KeymapSpec   = KeymapSpec,
+  KeymapModule = KeymapModule,
 }
 
 return M

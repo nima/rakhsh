@@ -23,9 +23,8 @@ local tags_next_prev = { T.SeekActive, T.ActionView, T.TargetBuffer, T.FilterGit
 local tags_preview = { T.ActionView, T.TargetBuffer, T.FilterGitModified, T.FilterGit }
 local tags_blame = { T.ActionView, T.TargetBuffer, T.BasisContent, T.FilterGit }
 local tags_toggle = { T.ActionLaunch, T.TargetBuffer, T.FilterGit }
-local type PluginSpec = t.plugins.PluginSpec
 local _mod = "gitsigns"
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   local function gs(): GitSigns return (require(_mod) as GitSigns) end
   local km : { PluginKeymap } = {
     { mode = "n", role = R.Go,    key = "]", rhs = function() gs().next_hunk() end,                 desc = "Next git hunk",             tags = tags_next_prev, on = On.Attach },
@@ -59,7 +58,7 @@ function M.lazy(): PluginSpec
         end,
       })
     end,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

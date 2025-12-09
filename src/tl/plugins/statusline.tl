@@ -54,8 +54,7 @@ local function used_marks(): string
   return "'" .. table.concat(used, "")
 end
 
-local type PluginSpec = t.plugins.PluginSpec
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   return {
     "nvim-lualine/lualine.nvim",
     lazy = false,
@@ -96,7 +95,7 @@ function M.lazy(): PluginSpec
         },
       })
     end
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

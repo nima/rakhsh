@@ -5,8 +5,6 @@ local T = keymaps.Tags
 
 global vim: t.vim.Vim
 
-local M: t.plugins.PluginModule = {}
-
 --= Observer -={
 --- Line Numbers
 local function toggle_numbers()
@@ -51,6 +49,8 @@ local function cycle_cursor_modes()
     vim.wo.cursorcolumn = true
   end
 end
+
+local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
   keymaps.safemap(

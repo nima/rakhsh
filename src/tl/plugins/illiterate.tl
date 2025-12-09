@@ -3,6 +3,7 @@ local keymaps = require("core.keymaps")
 local T = keymaps.Tags
 local R = keymaps.Roles
 local On = t.plugins.KeymapEvents
+local d = require("plugins.dialogues")
 
 global vim: t.vim.Vim
 
@@ -53,6 +54,15 @@ function M.lazy(): t.plugins.PluginSpec
         tags = { T.ActionInfo, T.TargetBuffer },
         on = On.Immediate,
       },
+      {
+        mode = "n",
+        role = R.TUI,
+        key = "h",
+        rhs = function() d.open_popup_with_cmd_sandboxed("TSModuleInfo") end,
+        desc = "[TreeSitter]: Module info",
+        tags = { T.ActionInfo, T.TargetBuffer },
+        on = On.Immediate,
+      }
     },
     config = function(): nil
       local _cfg = "nvim-treesitter.configs"

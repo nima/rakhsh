@@ -34,6 +34,7 @@ local record Vim
   treesitter: VimTreesitter
   --- add optional lua-level split if desired
   split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
+  trim: function(str: string): string
 end
 
 --= Layer 1
@@ -122,6 +123,10 @@ local record VimApi
   nvim_list_bufs: function(): {integer}
   nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
   nvim_buf_call: function(bufnr: integer, fn: VimCallback): any
+  nvim_replace_termcodes: function(str: string, from_part: boolean, do_lt: boolean, special: boolean): string
+  nvim_feedkeys: function(keys: string, mode: string, escape_ks: boolean): nil
+  nvim_get_current_tabpage: function(): integer
+  nvim_set_current_tabpage: function(tabpage: integer): nil
 end
 
 local record VimBo
