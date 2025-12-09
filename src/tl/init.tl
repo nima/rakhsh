@@ -15,6 +15,7 @@ terminal.init()
 
 require("core.plugins").init({
   "plugins.lsp",        -- LSP
+  "plugins.buffed",     -- Buffers (bufferin,buffferline,nvim-web-devicons)
   "plugins.navigation", -- Navigation (which-key)
   "plugins.visuals",    -- Colorschemes, special comments, syntax highlighting
   "plugins.cmp",        -- Autocomplete

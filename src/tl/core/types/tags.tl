@@ -1,4 +1,4 @@
-local record Tag _tag: string end
+local record Tag tid: string end
 local record TagTable
     TargetFile: Tag
     TargetBuffer: Tag
@@ -35,36 +35,36 @@ end
 
 local Tags: TagTable = {
     -- I want to search for a
-    TargetFile        = { _tag = "t/file" },
-    TargetBuffer      = { _tag = "t/buf" },
+    TargetFile        = { tid = "t/file" },
+    TargetBuffer      = { tid = "t/buf" },
     --
-    SeekSearch        = { _tag = "s" },
-    SeekActive        = { _tag = "s/active" },
+    SeekSearch        = { tid = "s" },
+    SeekActive        = { tid = "s/active" },
     --
-    InputCursor: Tag  = { _tag = "i/cursor" },
-    InputField: Tag   = { _tag = "i/field" },
+    InputCursor: Tag  = { tid = "i/cursor" },
+    InputField: Tag   = { tid = "i/field" },
     -- ...perform...
-    ActionHelp        = { _tag = "a/help" },
-    ActionInfo        = { _tag = "a/info" },
-    ActionEdit        = { _tag = "a/ed" },
-    ActionList        = { _tag = "a/ls" },
-    ActionView        = { _tag = "a/v" },
-    ActionLaunch      = { _tag = "a/run" },
-    ActionInstall     = { _tag = "a/inst" },
-    ActionToggle      = { _tag = "a/toggle" },
+    ActionHelp        = { tid = "a/help" },
+    ActionInfo        = { tid = "a/info" },
+    ActionEdit        = { tid = "a/ed" },
+    ActionList        = { tid = "a/ls" },
+    ActionView        = { tid = "a/v" },
+    ActionLaunch      = { tid = "a/run" },
+    ActionInstall     = { tid = "a/inst" },
+    ActionToggle      = { tid = "a/toggle" },
     -- ...via..
-    MethodFuzzy       = { _tag = "m/fz" },
-    MethodRegex       = { _tag = "m/rx" },
-    MethodSubstr      = { _tag = "m/ss" },
+    MethodFuzzy       = { tid = "m/fz" },
+    MethodRegex       = { tid = "m/rx" },
+    MethodSubstr      = { tid = "m/ss" },
     -- ..by...
-    BasisContent      = { _tag = "b/data" },
-    BasisName         = { _tag = "b/name" },
-    BasisSymbol       = { _tag = "b/symbol" },
+    BasisContent      = { tid = "b/data" },
+    BasisName         = { tid = "b/name" },
+    BasisSymbol       = { tid = "b/symbol" },
     -- ..filtered by...
-    FilterGit         = { _tag = "f/git" },
-    FilterGitModified = { _tag = "f/git/stat" },
+    FilterGit         = { tid = "f/git" },
+    FilterGitModified = { tid = "f/git/stat" },
     -- ..prioritize by...
-    PrioMRU           = { _tag = "p/mru" },
+    PrioMRU           = { tid = "p/mru" },
 }
 setmetatable(Tags, { __newindex = function() error("Cannot add new enum values to Tags") end })
 

@@ -235,6 +235,7 @@ local record VimOptRuntime
   wrap: boolean
   shortmess: VimOptionList
   swapfile: boolean
+  termguicolors: boolean
 end
 
 local type VimCallback = function(ev: {string:any} | nil)

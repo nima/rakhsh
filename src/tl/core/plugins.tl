@@ -94,7 +94,7 @@ local function validate_plugin_keymap(src: string, km: t.plugins.PluginKeymap): 
   if km.role == nil then
     error(("apply_plugin_keymaps[%s]: keymap missing role (key = %s, desc = %s)"):format(src, km.key or "?", km.desc or "?"), 2)
   end
-  if type(km.role) ~= "table" or km.role._tag == nil then
+  if type(km.role) ~= "table" or km.role.name == nil then
     error(("apply_plugin_keymaps[%s]: invalid role for key %s (desc = %s): %s"):format(src, km.key or "?", km.desc or "?", tostring(km.role)), 2)
   end
   if km.key == nil or km.key == "" then
