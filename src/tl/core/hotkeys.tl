@@ -16,6 +16,25 @@ local record RakhshKeymap
 end
 local registry: {RakhshKeymap} = {}
 
+local function format_tags(tags: { t.tags.Tag }): string
+  if tags == nil or #tags == 0 then
+    return ""
+  end
+
+  local rendered: {string} = {}
+  for _, tag in ipairs(tags) do
+    if tag.tid ~= nil then
+      table.insert(rendered, "#" .. tag.tid)
+    end
+  end
+
+  if #rendered == 0 then
+    return ""
+  end
+
+  return "[" .. table.concat(rendered, ", ") .. "]"
+end
+
 local record TelescopeEntry
   value: RakhshKeymap
 end
@@ -93,16 +112,8 @@ function M.show_help(): nil
 
   local function make_display(entry: TelescopeEntry): string
     local m = entry.value
-    local full = m.desc
-    local desc = full
-    local tags_suffix = ""
-
-    -- If description already has a trailing [#tag,...] block, split it out
-    local s, _e = string.find(full, "%[[^%]]+%]%s*$")
-    if s ~= nil then
-      desc = vim.trim(string.sub(full, 1, s - 1))
-      tags_suffix = string.sub(full, s)
-    end
+    local desc = m.desc or ""
+    local tags_suffix = format_tags(m.tags)
 
     return displayer({
       { m.mode,       "RakhshKeyMode" },
@@ -117,7 +128,8 @@ function M.show_help(): nil
     finder = finders.new_table({
       results = registry,
       entry_maker = function(m: RakhshKeymap): any
-        local ordinal = m.mode .. " " .. m.key .. " " .. m.desc
+        local tags_suffix = format_tags(m.tags)
+        local ordinal = m.mode .. " " .. m.key .. " " .. (m.desc or "") .. " " .. tags_suffix
         return {
           value = m,
           ordinal = ordinal,

@@ -151,13 +151,17 @@ function M.safemap(
     rhs_str = "<lua>"
   end
 
+  local tags: {t.tags.Tag} = {}
+  table.move(opts.tags, 1, #opts.tags, 1, tags)
+  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
+
   hotkeys.register({
     mode = mode,
     role = role,
     key = lhs,
     rhs = rhs_str,
     desc = vim_opts.desc or "",
-    tags = opts.tags,
+    tags = tags,
     group = nil,
   })
 end
@@ -186,13 +190,17 @@ function M.safemap_buf(
     rhs_str = "<lua>"
   end
 
+  local tags: {t.tags.Tag} = {}
+  table.move(opts.tags, 1, #opts.tags, 1, tags)
+  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
+
   hotkeys.register({
     mode = mode,
     role = role,
     key = lhs,
     rhs = rhs_str,
     desc = (merged as t.vim.VimMapOpts).desc,
-    tags = opts.tags,
+    tags = tags,
     group = nil,
   })
 end
@@ -202,23 +210,10 @@ function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
     error("opts: tags must be non-empty")
   end
 
-  local rendered: {string} = {}
-  for _, tag in ipairs(tags) do
-    table.insert(rendered, "#" .. tag.tid)
-  end
-
-  local tag_str = table.concat(rendered, ", ")
-  local effective_desc = desc
-  if effective_desc ~= "" then
-    effective_desc = ("%s [%s]"):format(effective_desc, tag_str)
-  else
-    effective_desc = ("[%s]"):format(tag_str)
-  end
-
   local vim_opts: t.vim.VimMapOpts = {
     noremap = true,
     silent  = true,
-    desc    = effective_desc,
+    desc    = desc,
   }
 
   local out: RakhshMapOpts = {
