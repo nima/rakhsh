@@ -1,8 +1,7 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
 local plugins = require("core.plugins")
-local R = keymaps.Roles;
-local T = keymaps.Tags;
+local T = t.tags.Tags
+local R = t.roles.Roles
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -19,10 +18,10 @@ end
 
 local type PluginKeymap = t.plugins.PluginKeymap
 local On = t.plugins.KeymapEvents
-local tags_next_prev = { T.SeekActive, T.ActionView, T.TargetBuffer, T.FilterGitModified, T.FilterGit }
-local tags_preview = { T.ActionView, T.TargetBuffer, T.FilterGitModified, T.FilterGit }
-local tags_blame = { T.ActionView, T.TargetBuffer, T.BasisContent, T.FilterGit }
-local tags_toggle = { T.ActionLaunch, T.TargetBuffer, T.FilterGit }
+local tags_next_prev = { T.ActionView, T.TargetBuffer }
+local tags_preview = { T.ActionView, T.TargetBuffer }
+local tags_blame = { T.ActionView, T.TargetBuffer }
+local tags_toggle = { T.ActionLaunch, T.TargetBuffer }
 local _mod = "gitsigns"
 function M.lazy(): t.plugins.PluginSpec
   local function gs(): GitSigns return (require(_mod) as GitSigns) end

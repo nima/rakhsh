@@ -1,12 +1,9 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
 global vim: t.vim.Vim
-
-local M: t.plugins.PluginModule = {}
 
 local type ChatGPTOpts = { string: any }
 local record ChatGPT
@@ -22,68 +19,27 @@ local function guard(cmd: string): string|function
   return err
 end
  
+local M: t.plugins.PluginModule = {}
+
+local keymaps = {
+  { mode = "n", role = R.AI, key = "c", on = On.Immediate, rhs = guard("<cmd>ChatGPT<CR>"), tags = { T.ActionLaunch, T.TargetDialogue }, desc = "ChatGPT: main chat window" },
+  { mode = "v", role = R.AI, key = "e", on = On.Immediate, rhs = guard("<cmd>ChatGPTEditWithInstructions<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: edit selection with instructions (visual)" },
+  { mode = "n", role = R.AI, key = "x", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun explain_code<CR>"), tags = { T.ActionHelp, T.TargetBuffer }, desc = "ChatGPT: explain code" },
+  { mode = "n", role = R.AI, key = "f", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun fix_bugs<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: fix bugs" },
+  { mode = "n", role = R.AI, key = "o", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun optimize_code<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: optimize code" },
+  { mode = "n", role = R.AI, key = "t", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun add_tests<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: add tests" },
+  { mode = "n", role = R.AI, key = "r", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun refactor<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: refactor" },
+  { mode = "n", role = R.AI, key = "d", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun docstring<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: docstring" },
+  { mode = "n", role = R.AI, key = "S", on = On.Immediate, rhs = guard("<cmd>ChatGPTSplit<CR>"), tags = { T.ActionLaunch, T.TargetDialogue }, desc = "ChatGPT: vertical split quick scratchpad chat" },
+  { mode = "n", role = R.AI, key = "g", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun grammar_correction<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: grammar correction" },
+  { mode = "v", role = R.AI, key = "l", on = On.Immediate, rhs = guard("<cmd>ChatGPTRun translate<CR>"), tags = { T.ActionEdit, T.TargetBuffer }, desc = "ChatGPT: translate selection" },
+}
+
 function M.lazy(): t.plugins.PluginSpec
-  local km = {
-    { mode = "n", role = R.AI, key = "c", rhs = guard("<cmd>ChatGPT<CR>"),
-      desc = "ChatGPT: main chat window",
-      tags = { T.ActionLaunch, T.TargetDialogue },
-      on = On.Immediate },
-
-    { mode = "v", role = R.AI, key = "e", rhs = guard("<cmd>ChatGPTEditWithInstructions<CR>"),
-      desc = "ChatGPT: edit selection with instructions (visual)",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "x", rhs = guard("<cmd>ChatGPTRun explain_code<CR>"),
-      desc = "ChatGPT: explain code",
-      tags = { T.ActionHelp, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "f", rhs = guard("<cmd>ChatGPTRun fix_bugs<CR>"),
-      desc = "ChatGPT: fix bugs",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "o", rhs = guard("<cmd>ChatGPTRun optimize_code<CR>"),
-      desc = "ChatGPT: optimize code",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "t", rhs = guard("<cmd>ChatGPTRun add_tests<CR>"),
-      desc = "ChatGPT: add tests",
-      tags = { T.ActionEdit, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "r", rhs = guard("<cmd>ChatGPTRun refactor<CR>"),
-      desc = "ChatGPT: refactor",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "d", rhs = guard("<cmd>ChatGPTRun docstring<CR>"),
-      desc = "ChatGPT: docstring",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "S", rhs = guard("<cmd>ChatGPTSplit<CR>"),
-      desc = "ChatGPT: vertical split quick scratchpad chat",
-      tags = { T.ActionLaunch, T.TargetDialogue },
-      on = On.Immediate },
-
-    { mode = "n", role = R.AI, key = "g", rhs = guard("<cmd>ChatGPTRun grammar_correction<CR>"),
-      desc = "ChatGPT: grammar correction",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-
-    { mode = "v", role = R.AI, key = "l", rhs = guard("<cmd>ChatGPTRun translate<CR>"),
-      desc = "ChatGPT: translate selection",
-      tags = { T.ActionEdit, T.BasisContent, T.TargetBuffer },
-      on = On.Immediate },
-  }
-
   return {
     "jackMort/ChatGPT.nvim",
     lazy = false,
-    keymaps = km,
+    keymaps = keymaps,
     dependencies = {
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",

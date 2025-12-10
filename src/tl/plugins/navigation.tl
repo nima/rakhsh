@@ -1,7 +1,6 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
 local type WhichKeyOpts = { string: any }
@@ -20,7 +19,7 @@ function M.lazy(): t.plugins.PluginSpec
     cmd = "WhichKey",
     event = "VeryLazy",
     keymaps = {
-      { mode = "n", role = R.Info, key = "?", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.Dialogue }, on = On.Immediate },
+      { mode = "n", role = R.Info, key = "?", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.TargetDialogue }, on = On.Immediate },
     },
 
     dependencies = {

@@ -1,7 +1,6 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local T = keymaps.Tags
-local R = keymaps.Roles
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
 global vim: t.vim.Vim
@@ -136,7 +135,7 @@ function M.lazy(): t.plugins.PluginSpec
         key = "R",
         rhs = function() M.open_popup_with_file("README.md") end,
         desc = "RTFM",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        tags = { T.ActionView, T.TargetBuffer },
         on = On.Immediate,
       }
     },

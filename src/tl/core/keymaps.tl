@@ -31,11 +31,6 @@ local record KeymapModule
   opts: function(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
 end
 
-local M: KeymapModule = {
-  Roles = t.roles.Roles,
-  Tags  = t.tags.Tags,
-}
-
 local function ensure_role(mode: string, role: t.roles.Role, key: string): nil
   if type(role) ~= "table" or role.name == nil then
     local caller = debug.getinfo(4, "Sl")
@@ -128,6 +123,11 @@ local function find_buf_map(bufnr: integer, mode: string, lhs: string): t.vim.Vi
   end
   return nil
 end
+
+local M: KeymapModule = {
+  Roles = t.roles.Roles,
+  Tags  = t.tags.Tags,
+}
 
 function M.safemap(
   mode: string,

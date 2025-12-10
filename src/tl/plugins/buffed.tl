@@ -1,7 +1,6 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local T = keymaps.Tags
-local R = keymaps.Roles
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
 global vim: t.vim.Vim
@@ -30,10 +29,10 @@ function M.lazy(): t.plugins.PluginSpec
       {
         mode = "n",
         role = R.GoVia,
-        key = "b",
+        key = "<Tab>",
         rhs = "<cmd>Bufferin<CR>",
         desc = "Buffers: open buffer manager",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        tags = { T.ActionSelect, T.TargetBuffer, T.ViaDialogue },
         on = On.Immediate,
       },
       {
@@ -42,7 +41,7 @@ function M.lazy(): t.plugins.PluginSpec
         key = "n",
         rhs = "<cmd>BufferLineCycleNext<CR>",
         desc = "Buffers: next buffer (bufferline)",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        tags = { T.ActionNavigate, T.TargetBuffer },
         on = On.Immediate,
       },
       {
@@ -51,7 +50,7 @@ function M.lazy(): t.plugins.PluginSpec
         key = "p",
         rhs = "<cmd>BufferLineCyclePrev<CR>",
         desc = "Buffers: previous buffer (bufferline)",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        tags = { T.ActionNavigate, T.TargetBuffer },
         on = On.Immediate,
       },
     },

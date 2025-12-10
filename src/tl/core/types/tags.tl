@@ -1,77 +1,112 @@
 local record Tag tid: string end
 local record TagTable
+    --+ Verbs / actions (what)
+    ActionSearch: Tag
+    ActionSelect: Tag
+    ActionView: Tag
+    ActionEdit: Tag
+    ActionHelp: Tag
+    ActionNavigate: Tag
+    ActionList: Tag
+    ActionToggle: Tag
+    ActionLaunch: Tag
+
+    --+ Nouns / targets (to what)
+    TargetDoc: Tag
     TargetFile: Tag
     TargetBuffer: Tag
+    TargetWindow: Tag
+    TargetTab: Tag
+    TargetProject: Tag
+    TargetWorkspace: Tag
+    TargetSymbol: Tag
+    TargetLine: Tag
+    TargetSelection: Tag
+    TargetDiagnostic: Tag
+    TargetBreakpoint: Tag
+    TargetTerminal: Tag
+    TargetTest: Tag
     TargetDialogue: Tag
-    --
-    SeekSearch: Tag
-    SeekActive: Tag
-    --
-    InputCursor: Tag
-    InputField: Tag
-    --
-    ActionHelp: Tag
-    ActionInfo: Tag
-    ActionEdit: Tag
-    ActionList: Tag
-    ActionView: Tag
-    ActionLaunch: Tag
-    ActionInstall: Tag
-    ActionToggle: Tag
-    --
-    MethodFuzzy: Tag
-    MethodRegex: Tag
-    MethodSubstr: Tag
-    --
-    BasisContent: Tag
-    BasisName: Tag
-    BasisSymbol: Tag
-    --
-    FilterGit: Tag
-    FilterGitModified: Tag
-    --
-    PrioMRU: Tag
+    TargetCursor: Tag
+    TargetField: Tag
+    TargetGit: Tag
+    TargetRepl: Tag
+    TargetShell: Tag
+
+    --+ How / method / filter / scope (how)
+    ViaFuzzy: Tag
+    ViaRegex: Tag
+    ViaSubstr: Tag
+    ViaContent: Tag
+    ViaSymbol: Tag
+    ViaName: Tag
+    ViaPath: Tag
+    ViaActive: Tag
+    ViaGit: Tag
+    ViaGitModified: Tag
+    ViaMRU: Tag
+    ViaDialogue: Tag
+    ViaDebug: Tag
 end
 
 local Tags: TagTable = {
-    -- I want to search for a
-    TargetFile        = { tid = "t/file" },
-    TargetBuffer      = { tid = "t/buf" },
-    --
-    SeekSearch        = { tid = "s" },
-    SeekActive        = { tid = "s/active" },
-    --
-    InputCursor: Tag  = { tid = "i/cursor" },
-    InputField: Tag   = { tid = "i/field" },
-    -- ...perform...
-    ActionHelp        = { tid = "a/help" },
-    ActionInfo        = { tid = "a/info" },
-    ActionEdit        = { tid = "a/ed" },
-    ActionList        = { tid = "a/ls" },
-    ActionView        = { tid = "a/v" },
-    ActionLaunch      = { tid = "a/run" },
-    ActionInstall     = { tid = "a/inst" },
-    ActionToggle      = { tid = "a/toggle" },
-    -- ...via..
-    MethodFuzzy       = { tid = "m/fz" },
-    MethodRegex       = { tid = "m/rx" },
-    MethodSubstr      = { tid = "m/ss" },
-    -- ..by...
-    BasisContent      = { tid = "b/data" },
-    BasisName         = { tid = "b/name" },
-    BasisSymbol       = { tid = "b/symbol" },
-    -- ..filtered by...
-    FilterGit         = { tid = "f/git" },
-    FilterGitModified = { tid = "f/git/stat" },
-    -- ..prioritize by...
-    PrioMRU           = { tid = "p/mru" },
+    --+ Verbs / actions (what)
+    ActionSearch      = { tid = "a/search" },   -- generic search/find
+    ActionSelect      = { tid = "a/select" },   -- generic select
+    ActionView        = { tid = "a/view" },     -- view/read-only
+    ActionEdit        = { tid = "a/ed" },       -- modify/mutate
+    ActionHelp        = { tid = "a/help" },     -- help/cheatsheets/docs
+    ActionNavigate    = { tid = "a/nav" },      -- jump/move/go
+    ActionList        = { tid = "a/ls" },       -- list things
+    ActionToggle      = { tid = "a/toggle" },   -- toggle state
+    ActionLaunch      = { tid = "a/run" },      -- run/build/test/launch tools
+
+    --+ Nouns / targets (to what); ultimate prize
+    TargetDoc         = { tid = "t/doc" },      -- documentation/help
+    TargetFile        = { tid = "t/file" },     -- files on disk
+    TargetBuffer      = { tid = "t/buf" },      -- open buffers
+    TargetWindow      = { tid = "t/win" },      -- editor windows/splits
+    TargetTab         = { tid = "t/tab" },      -- tabpages
+    TargetProject     = { tid = "t/proj" },     -- project/root dir
+    TargetWorkspace   = { tid = "t/ws" },       -- multi-project workspace
+    TargetSymbol      = { tid = "t/sym" },      -- LSP/TS symbol
+    TargetLine        = { tid = "t/line" },     -- line-level operations
+    TargetSelection   = { tid = "t/sel" },      -- visual selection range
+    TargetDiagnostic  = { tid = "t/diag" },     -- diagnostics/problems
+    TargetBreakpoint  = { tid = "t/bp" },       -- debugger breakpoints
+    TargetTerminal    = { tid = "t/term" },     -- terminal buffers
+    TargetTest        = { tid = "t/test" },     -- tests/specs
+    TargetDialogue    = { tid = "t/dialog" },   -- popups/dialogue UIs
+    TargetCursor      = { tid = "t/cursor" },   -- cursor position
+    TargetField       = { tid = "t/field" },    -- input fields/prompts
+    TargetGit         = { tid = "t/git" },      -- repo/branch/commit objects
+    TargetRepl        = { tid = "t/repl" },     -- repl (ipython)
+    TargetShell       = { tid = "t/shell" },    -- shell (bash, zsh)
+
+    --+ How / method / filter / scope (how)
+    ViaFuzzy          = { tid = "v/fz" },       -- fuzzy matching
+    ViaRegex          = { tid = "v/rx" },       -- regex search
+    ViaSubstr         = { tid = "v/ss" },       -- substring search
+    ViaContent        = { tid = "v/data" },     -- search/match by content
+    ViaSymbol         = { tid = "v/symbol" },   -- search/match by symbol
+    ViaName           = { tid = "v/name" },     -- search/match by name
+    ViaPath           = { tid = "v/path" },     -- restricted to current file
+    ViaActive         = { tid = "v/active" },   -- current/active entity only
+    ViaGit            = { tid = "v/git" },      -- git-filtered view
+    ViaMRU            = { tid = "v/mru" },      -- prioritize MRU
+    ViaDialogue       = { tid = "v/dialog" },   -- dialogue
+    ViaDebug          = { tid = "v/dbg" },      -- in debugging context
 }
 setmetatable(Tags, { __newindex = function() error("Cannot add new enum values to Tags") end })
 
-local M = {
+local record TagsModule
+  Tag: Tag
+  Tags: TagTable
+end
+
+local M: TagsModule = {
   Tag      = Tag,
   Tags     = Tags,
-  TagTable = TagTable,
 }
 
 return M

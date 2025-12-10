@@ -1,7 +1,6 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local T = keymaps.Tags
-local R = keymaps.Roles
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 local d = require("plugins.dialogues")
 
@@ -41,8 +40,8 @@ function M.lazy(): t.plugins.PluginSpec
         role = R.TUI,
         key = "i",
         rhs = install_here,
-        desc = "TS: install parsers for this buffer",
-        tags = { T.ActionInstall, T.TargetBuffer },
+        desc = "[TreeSitter] Install parsers for this buffer",
+        tags = { T.ActionLaunch, T.TargetBuffer },
         on = On.Immediate,
       },
       {
@@ -51,7 +50,7 @@ function M.lazy(): t.plugins.PluginSpec
         key = "?",
         rhs = function() d.open_popup_with_cmd_sandboxed("TSModuleInfo") end,
         desc = "[TreeSitter]: Module info",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        tags = { T.ActionView, T.TargetBuffer },
         on = On.Immediate,
       }
     },

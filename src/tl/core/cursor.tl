@@ -1,7 +1,7 @@
 local t = require("core.types")
 local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local R = t.roles.Roles
+local T = t.tags.Tags
 global vim: t.vim.Vim
 
 -- Simple cursor-word highlight toggle; no cursor-position persistence.
@@ -51,11 +51,7 @@ local function toggle_cursorword(): nil
   end
 end
 
-local record CursorModule
-  init: function(): nil
-end
-
-local M: CursorModule = {}
+local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
   define_cursorword_hl()

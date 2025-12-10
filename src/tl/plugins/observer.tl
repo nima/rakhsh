@@ -1,7 +1,7 @@
 local t = require("core.types")
 local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local T = t.tags.Tags
+local R = t.roles.Roles
 
 global vim: t.vim.Vim
 
@@ -66,7 +66,7 @@ function M.init(): nil
     R.Toggle,
     ".",
     cycle_cursor_modes,
-    keymaps.opts("Cycle cursor crosshair modes", { T.TargetBuffer, T.InputCursor, T.ActionToggle })
+    keymaps.opts("Cycle cursor crosshair modes", { T.TargetBuffer, T.ActionToggle })
   )
 
   vim.api.nvim_set_hl(0, "CursorLine",   { bg = "#303030" })

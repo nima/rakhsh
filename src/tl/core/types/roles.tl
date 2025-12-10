@@ -56,7 +56,7 @@ local ActivationPrefix: {string: {Role: string}} = {
         [Roles.LSPEdit] = "<C-F12>",
         [Roles.LSPDiag] = "<S-F12>",
     },
-    v = { [Roles.AI] = "<Leader>i", },
+    v = { [Roles.AI] = "<F5>", },
     i = {},
 }
 setmetatable(ActivationPrefix, { __newindex = function() error("Cannot add new enum values to Roles") end })
