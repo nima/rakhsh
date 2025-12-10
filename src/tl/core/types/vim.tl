@@ -39,6 +39,11 @@ end
 
 --= Layer 1
 
+local record VimEnv
+  COLUMNS: string | nil
+  LINES: string | nil
+end
+
 local record VimSplitOpts
   plain: boolean
 end
@@ -391,12 +396,6 @@ end
 
 local record VimLog
   levels: VimLogLevels
-end
-
-local record VimEnv
-  OPENAI_API_KEY: string | nil
-  COLUMNS: string | nil
-  LINES: string | nil
 end
 
 local record VimNotify
