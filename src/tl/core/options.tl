@@ -3,30 +3,32 @@ local cfg = require("core.config")
 
 global vim: t.vim.Vim
 
+--+ vim.o is the global default for all future actions
+--+ vim.wo is the current window
+--+ vim.opt is the smart API that sets BOTH vim.o and vim.wo correctly
+
 --= 1. Disable legacy built-in plugins
 vim.g.loaded_matchit = 1
 vim.opt.shortmess:append("I")
 vim.opt.swapfile = false
 
 --= 2. Pure Core State
-vim.o.laststatus = 3
-vim.o.showmode = false
-vim.o.cmdheight = 0
+vim.opt.laststatus = 3
+vim.opt.showmode = false
+vim.opt.cmdheight = 0
 
 --= 3. User Settings
-vim.o.updatetime = 500
-vim.o.more = false
-vim.o.number = true
-vim.o.relativenumber = true
-vim.o.termguicolors = true
-vim.o.numberwidth = 3
-vim.o.signcolumn = "yes:2"
-vim.o.clipboard = "unnamedplus"
-vim.o.mouse = "a"
-vim.o.more = false
-
+vim.opt.updatetime = 500
+vim.opt.termguicolors = true
+vim.opt.numberwidth = 3
+vim.opt.signcolumn = "yes:2"
+vim.opt.clipboard = "unnamedplus"
+vim.opt.mouse = "a"
+vim.opt.more = false
 vim.opt.wrap = false
 vim.opt.scrolloff = cfg.scrolloff
+vim.opt.number = true
+vim.opt.relativenumber = true
 
 vim.g.mapleader = " "
 
@@ -61,3 +63,19 @@ api.nvim_create_autocmd("FileType", {
         fo:remove({ "c", "r", "o" })
     end,
 })
+
+local line_group = api.nvim_create_augroup("rakhsh_line_numbers", { clear = true })
+api.nvim_create_autocmd("BufWinEnter", {
+    group = line_group,
+    pattern = "*",
+    callback = function(): nil
+        if vim.bo[0].buftype == "" and vim.bo[0].filetype ~= "rakhsh-splash" then
+            vim.wo.number = true
+            vim.wo.relativenumber = true
+            vim.wo.fillchars = "eob:~"
+            vim.api.nvim_set_hl(0, "EndOfBuffer", { link = "NonText" })
+        end
+    end,
+})
+
+vim.notify("[core.options] LOADED", vim.log.levels.INFO, {})
