@@ -335,6 +335,7 @@ local record VimWo
   signcolumn: string
   foldcolumn: string
   list: boolean
+  fillchars: string
 end
 
 local record VimGlobal

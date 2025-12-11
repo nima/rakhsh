@@ -188,6 +188,7 @@ local function show_rakhsh_splash(): nil
   vim.wo.foldcolumn     = "0"
   vim.wo.list           = false
   vim.wo.cursorline     = false
+  vim.wo.fillchars      = "eob: "
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
 
