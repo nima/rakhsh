@@ -1,9 +1,9 @@
 --+ Minimal Rakhsh folds: color markers + fold toggle. No Treesitter.
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local T = t.tags.Tags
-local R = t.roles.Roles
+
 global vim: t.vim.Vim
+
+local ns = vim.api.nvim_create_namespace("rakhsh_folds")
 
 --+ Define highlight groups
 local function define_fold_marker_highlights()
@@ -36,7 +36,6 @@ end
 
 --+ Apply extmarks for markers found inside comments.
 local function apply_markers(buf: integer)
-  local ns = vim.api.nvim_create_namespace("rakhsh_folds")
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
   --+ Patterns inside comments only.
@@ -68,15 +67,22 @@ local function apply_markers(buf: integer)
   end
 end
 
+local record FoldsModule
+  toggle: function(): nil
+  setup: function(): nil
+end
+
+local M: FoldsModule = {}
+
 --+ Toggle fold delimited by comment markers
-local function toggle_comment_fold()
+function M.toggle(): nil
   local buf = vim.api.nvim_get_current_buf()
   local cur = vim.api.nvim_win_get_cursor(0)[1]
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
   --+ Ensure manual fold mode
-  if vim.wo.foldmethod ~= "manual" then
-    vim.wo.foldmethod = "manual"
+  if vim.wo[0].foldmethod ~= "manual" then
+    vim.wo[0].foldmethod = "manual"
     vim.cmd("silent! normal! zE")
   end
 
@@ -117,21 +123,7 @@ local function toggle_comment_fold()
   vim.cmd(string.format("%d,%dfold", open_line, close_line))
 end
 
---+ Autocmd to recolor markers on buffer events
-vim.api.nvim_create_autocmd(
-  { "BufReadPost", "BufWritePost", "TextChanged", "TextChangedI", "ColorScheme" },
-  {
-    group = vim.api.nvim_create_augroup("rakhsh_folds_min", { clear = true }),
-    callback = function(_ev): nil
-      define_fold_marker_highlights()
-      apply_markers(vim.api.nvim_get_current_buf())
-    end,
-  }
-)
-
-local M: t.plugins.PluginModule = {}
-
-function M.init(): nil
+function M.setup(): nil
   --+ Make sure viewdir exists so mkview/loadview can actually persist folds
   local viewdir = vim.fn.stdpath("state") .. "/view"
   vim.o.viewdir = viewdir
@@ -163,7 +155,17 @@ function M.init(): nil
 
   define_fold_marker_highlights()
 
-  keymaps.safemap("n", R.Naked, ";", toggle_comment_fold, keymaps.opts("Toggle comment fold", { T.TargetBuffer, T.ActionToggle }))
+  --+ Autocmd to recolor markers on buffer events
+  vim.api.nvim_create_autocmd(
+    { "BufReadPost", "BufWritePost", "TextChanged", "TextChangedI", "ColorScheme" },
+    {
+      group = vim.api.nvim_create_augroup("rakhsh_folds_min", { clear = true }),
+      callback = function(_ev): nil
+        define_fold_marker_highlights()
+        apply_markers(vim.api.nvim_get_current_buf())
+      end,
+    }
+  )
 end
 
 return M

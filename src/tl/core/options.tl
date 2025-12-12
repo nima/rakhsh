@@ -70,9 +70,9 @@ api.nvim_create_autocmd("BufWinEnter", {
     pattern = "*",
     callback = function(): nil
         if vim.bo[0].buftype == "" and vim.bo[0].filetype ~= "rakhsh-splash" then
-            vim.wo.number = true
-            vim.wo.relativenumber = true
-            vim.wo.fillchars = "eob:~"
+            vim.wo[0].number = true
+            vim.wo[0].relativenumber = true
+            vim.wo[0].fillchars = "eob:~"
             vim.api.nvim_set_hl(0, "EndOfBuffer", { link = "NonText" })
         end
     end,

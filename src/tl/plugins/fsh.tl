@@ -3,6 +3,10 @@ local R = t.roles.Roles
 local T = t.tags.Tags
 global vim: t.vim.Vim
 
+local OnEvents = t.plugins.KeymapEvents
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local type NvimTreeToggleOpts = { string: any }
 local record NvimTreeToggle
   setup: function(NvimTreeToggleOpts): nil
@@ -11,24 +15,32 @@ end
 
 local M: t.plugins.PluginModule = {}
 
-local type PluginKeymap = t.plugins.PluginKeymap
-local On = t.plugins.KeymapEvents
-local tags = { T.ActionView, T.TargetDialogue }
-function M.lazy(): t.plugins.PluginSpec
-  local keymaps : { PluginKeymap } = {
-    { mode = "n", role = R.Toggle, key = "t", rhs = function() vim.cmd("NvimTreeToggle") end,
-      desc = "File tree toggle", tags = tags, on = On.Immediate },
-  }
+function M.keymaps(): {PluginKeymap}
   return {
+    {
+      mode = "n",
+      role = R.Toggle,
+      key = "t",
+      rhs = function() vim.cmd("NvimTreeToggle") end,
+      desc = "File tree toggle",
+      tags = { T.ActionView, T.TargetDialogue },
+      on = OnEvents.Immediate,
+    },
+  }
+end
+
+function M.lazy(): {PluginSpec}
+  local spec = ({
     "nvim-tree/nvim-tree.lua",
     lazy = false,
-    keymaps = keymaps,
     config = function()
       local _ = "nvim-tree"
       local mod = (require(_) as NvimTreeToggle)
       mod.setup({ view = { width = 40 } })
     end,
-  } as t.plugins.PluginSpec
+  } as PluginSpec)
+
+  return { spec }
 end
 
 return M

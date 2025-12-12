@@ -5,6 +5,9 @@ local On = t.plugins.KeymapEvents
 
 global vim: t.vim.Vim
 
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local record BufferlineModule
   setup: function(config: { string: any }): nil
 end
@@ -15,46 +18,42 @@ end
 
 local M: t.plugins.PluginModule = {}
 
-function M.lazy(): t.plugins.PluginSpec
+function M.keymaps(): {PluginKeymap}
   return {
-    "wasabeef/bufferin.nvim",
+    {
+      mode = "n",
+      role = R.GoVia,
+      key = "<Tab>",
+      rhs = "<cmd>Bufferin<CR>",
+      desc = "Buffers: open buffer manager",
+      tags = { T.ActionSelect, T.TargetBuffer, T.ViaDialogue },
+      on = On.Immediate,
+    },
+    {
+      mode = "n",
+      role = R.Go,
+      key = "n",
+      rhs = "<cmd>BufferLineCycleNext<CR>",
+      desc = "Buffers: next buffer (bufferline)",
+      tags = { T.ActionNavigate, T.TargetBuffer },
+      on = On.Immediate,
+    },
+    {
+      mode = "n",
+      role = R.Go,
+      key = "p",
+      rhs = "<cmd>BufferLineCyclePrev<CR>",
+      desc = "Buffers: previous buffer (bufferline)",
+      tags = { T.ActionNavigate, T.TargetBuffer },
+      on = On.Immediate,
+    },
+  }
+end
+
+function M.lazy(): {PluginSpec}
+  local bufferline_spec = ({
+    "akinsho/bufferline.nvim",
     lazy = false,
-
-    dependencies = {
-      "akinsho/bufferline.nvim",
-      "nvim-tree/nvim-web-devicons",
-    },
-
-    keymaps = {
-      {
-        mode = "n",
-        role = R.GoVia,
-        key = "<Tab>",
-        rhs = "<cmd>Bufferin<CR>",
-        desc = "Buffers: open buffer manager",
-        tags = { T.ActionSelect, T.TargetBuffer, T.ViaDialogue },
-        on = On.Immediate,
-      },
-      {
-        mode = "n",
-        role = R.Go,
-        key = "n",
-        rhs = "<cmd>BufferLineCycleNext<CR>",
-        desc = "Buffers: next buffer (bufferline)",
-        tags = { T.ActionNavigate, T.TargetBuffer },
-        on = On.Immediate,
-      },
-      {
-        mode = "n",
-        role = R.Go,
-        key = "p",
-        rhs = "<cmd>BufferLineCyclePrev<CR>",
-        desc = "Buffers: previous buffer (bufferline)",
-        tags = { T.ActionNavigate, T.TargetBuffer },
-        on = On.Immediate,
-      },
-    },
-
     config = function(): nil
       local _mod = "bufferline"
       local bufferline = (require(_mod) as BufferlineModule)
@@ -69,14 +68,25 @@ function M.lazy(): t.plugins.PluginSpec
         },
       })
 
-      local _mod = "bufferin"
-      local bufferin = (require(_mod) as BufferinModule)
-      bufferin.setup({ show_window_layout = true, })
-
       --+ bufferline needs termguicolors
       vim.opt.termguicolors = true
     end,
-  } as t.plugins.PluginSpec
+  } as PluginSpec)
+
+  local bufferin_spec = ({
+    "wasabeef/bufferin.nvim",
+    lazy = false,
+    config = function(): nil
+      local _mod = "bufferin"
+      local bufferin = (require(_mod) as BufferinModule)
+      bufferin.setup({ show_window_layout = true })
+    end,
+  } as PluginSpec)
+
+  return {
+    bufferin_spec,
+    bufferline_spec,
+  }
 end
 
 return M

@@ -1,13 +1,13 @@
 -- Module minimal typedefs (only what we use)
-local record PickersModule
+local record Pickers
   new: function(opts: any, spec: any): any
 end
 
-local record FindersModule
+local record Finders
   new_table: function(opts: any): any
 end
 
-local record EntryDisplayModule
+local record EntryDisplay
   create: function(opts: any): function(any): string
 end
 
@@ -15,26 +15,35 @@ local record ConfigValues
   generic_sorter: function(opts: any): any
 end
 
-local record ConfigModule
+local record Config
   generic_sorter: function(opts: any): any
   values: ConfigValues
 end
 
-local record ActionsModule
+local record Actions
   close: function(bufnr: integer): nil
 end
 
-local record ActionStateModule
+local record ActionState
   get_selected_entry: function(): any
 end
 
+local type TelescopeOpts = { string : any }
+
+local record Telescope
+  setup: function(TelescopeOpts | nil): nil
+  load_extension: function(string): nil
+end
+
 local M = {
-    Pickers      = PickersModule,
-    Finders      = FindersModule,
-    EntryDisplay = EntryDisplayModule,
-    Config       = ConfigModule,
-    Actions      = ActionsModule,
-    ActionState  = ActionStateModule,
+  Pickers       = Pickers,
+  Finders       = Finders,
+  EntryDisplay  = EntryDisplay,
+  Config        = Config,
+  Actions       = Actions,
+  ActionState   = ActionState,
+  Telescope     = Telescope,
+  TelescopeOpts = TelescopeOpts,
 }
 
 return M

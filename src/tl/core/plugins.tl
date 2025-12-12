@@ -4,21 +4,25 @@ local R = t.roles.Roles
 local T = t.tags.Tags
 local OnEvents = t.plugins.KeymapEvents
 
-local plugs: {string} = {}
+global vim: t.vim.Vim
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
 local type PluginSpec = t.plugins.PluginSpec
 
+--------------------------------------------------------------------------------
+  
+local initialized: boolean = false
+
+--------------------------------------------------------------------------------
+
 local function bare(repo: string): PluginSpec
-  -- first element is the repo for lazy.nvim, extra named fields for Teal
+  --+ first element is the repo for lazy.nvim, extra named fields for Teal
   return { repo, repo = repo } as PluginSpec
 end
 
 local plugins: {PluginSpec} = {
   bare("L3MON4D3/LuaSnip"), -- Snippets
 }
-
-global vim: t.vim.Vim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
 local function setup_lazy(missing_install: boolean): boolean
   if not (vim.loop and vim.loop.fs_stat and vim.loop.fs_stat(lazypath)) then
@@ -36,14 +40,6 @@ local function setup_lazy(missing_install: boolean): boolean
     install = { missing = missing_install },
     checker = { enabled = false },
   })
-
-  --[[
-  local theme = vim.g.colorscheme as string
-  local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
-  if not ok then
-    vim.notify("rakhsh[colorcheme]: '" .. theme .. "' not found (install themes and restart)", vim.log.levels.WARN, nil)
-  end
-  ]]--
 
   return true
 end
@@ -67,24 +63,6 @@ local function RakhshLazyInstall(): nil
     vim.notify("rakhsh: lazy.nvim install failed", vim.log.levels.ERROR, nil)
     return
   end
-end
-
-local record CorePluginsModule
-  init: function(plugin_modules: {string}): nil
-  install: function(): nil
-  apply_plugin_keymaps: function(plugin_name: string): nil
-  apply_plugin_attach_keymaps: function(modname: string, bufnr: integer): nil
-  validate_keymaps: function(): nil
-end
-
--- Modules that define buffer-local (on-attach) keymaps and should be
--- validated during the post-validate step.
-local validate_attach_plugins = {
-  "plugins.lsp",
-}
-
-local record KeymapSpec
-  keymaps: {t.plugins.PluginKeymap} | nil
 end
 
 local function validate_plugin_keymap(src: string, km: t.plugins.PluginKeymap): nil
@@ -113,14 +91,10 @@ end
 
 local function apply_plugin_attach_keymaps_impl(modname: string, bufnr: integer): nil
   local mod = (require(modname) as t.plugins.PluginModule)
-  if mod.lazy == nil then return nil end
+  local keymapspecs = mod.keymaps()
 
-  local spec = (mod.lazy() as KeymapSpec)
-  local keymapspecs = spec.keymaps
-  if keymapspecs == nil then return nil end
-
-  for _, km in ipairs(keymapspecs as {t.plugins.PluginKeymap}) do
-    if km.on == t.plugins.KeymapEvents.Attach then
+  for _, km in ipairs(keymapspecs) do
+    if km.on == OnEvents.Attach then
       validate_plugin_keymap(("%s (attach)"):format(modname), km)
       keymaps.safemap_buf(bufnr, km.mode, km.role, km.key, km.rhs, keymaps.opts(km.desc, km.tags as {t.tags.Tag}))
     end
@@ -129,17 +103,10 @@ end
 
 local function apply_plugin_keymaps_impl(plugin_name: string): nil
   local mod = (require(plugin_name) as t.plugins.PluginModule)
-  if mod.lazy == nil then return nil end
 
-  local spec = (mod.lazy() as KeymapSpec)
-  if spec == nil then
-    error(("apply_plugin_keymaps[%s]: failed to load module"):format(plugin_name), 2)
-  end
+  local keymapspecs = mod.keymaps()
 
-  local keymapspecs = spec.keymaps
-  if keymapspecs == nil then return nil end
-
-  for _, km in ipairs(keymapspecs as {t.plugins.PluginKeymap}) do
+  for _, km in ipairs(keymapspecs) do
     validate_plugin_keymap(plugin_name, km)
 
     if km.on == nil or km.on == OnEvents.Immediate then
@@ -151,6 +118,12 @@ local function apply_plugin_keymaps_impl(plugin_name: string): nil
     end
   end
 end
+
+--+ Modules that define buffer-local (on-attach) keymaps and should be
+--+ validated during the post-validate step.
+local validate_attach_plugins = {
+  "plugins.lsp",
+}
 
 local function validate_keymaps_impl(): nil
   local bufnr = vim.api.nvim_create_buf(false, true)
@@ -167,33 +140,17 @@ local function has_lazy(): boolean
   return (vim.loop and vim.loop.fs_stat and vim.loop.fs_stat(lazypath)) ~= nil
 end
 
-local initialized = false
-local function ensure_initialized(): nil
-  if initialized then return end
-  for _, _mod in ipairs(plugs) do
-    local mod = (require(_mod) as t.plugins.PluginModule)
-    if mod.init ~= nil then mod.init() end
-    if mod.lazy ~= nil then
-      local spec = mod.lazy()
-      plugins[#plugins + 1] = spec
-    end
-    -- TODO: move to mod.setup()
-    apply_plugin_keymaps_impl(_mod)
-  end
-  initialized = true
+--------------------------------------------------------------------------------
+
+local record CorePluginsModule
+  init: function(plugin_modules: {string}): nil
+  install: function(): nil
+  apply_plugin_keymaps: function(plugin_name: string): nil
+  apply_plugin_attach_keymaps: function(modname: string, bufnr: integer): nil
+  validate_keymaps: function(): nil
+  ensure_initialized: function(): nil
+  plugs: {string}
 end
-
-
-vim.api.nvim_create_autocmd("UIEnter", {
-  once = true,
-  callback = function()
-    --+ if lazy.nvim already exists, then M.init already called setup_lazy(false)
-    if has_lazy() then return end
-
-    --+ if not, lazy not installed yet → run installer: Lazy's UI
-    RakhshLazyInstall()
-  end,
-})
 
 local M: CorePluginsModule = {} as CorePluginsModule
 
@@ -203,14 +160,44 @@ M.apply_plugin_attach_keymaps = apply_plugin_attach_keymaps_impl
 M.validate_keymaps = validate_keymaps_impl
 
 function M.init(plugin_modules: {string}): nil
-  plugs = plugin_modules
+  M.plugs = plugin_modules
   keymaps.safemap("n", R.Toggle, "I", M.install, keymaps.opts("Install Rakhsh IDE", { T.ActionLaunch }))
 
   --+ build plugin specs + keymaps eagerly
-  ensure_initialized()
+  M.ensure_initialized()
 
   --+ if lazy.nvim already installed, set up plugins now
   if has_lazy() then setup_lazy(false) end
 end
+
+function M.ensure_initialized(): nil
+  if initialized then return end
+
+  for _, _mod in ipairs(M.plugs) do
+    local mod = (require(_mod) as t.plugins.PluginModule)
+    if mod.init ~= nil then mod.init() end
+    if mod.lazy ~= nil then
+      local specs = mod.lazy()
+      for _, spec in ipairs(specs) do
+        plugins[#plugins + 1] = spec
+      end
+    end
+    apply_plugin_keymaps_impl(_mod)
+  end
+
+  vim.api.nvim_create_autocmd("UIEnter", {
+    once = true,
+    callback = function()
+      --+ if lazy.nvim already exists, then M.init already called setup_lazy(false)
+      if has_lazy() then return end
+
+      --+ if not, lazy not installed yet → run installer: Lazy's UI
+      RakhshLazyInstall()
+    end,
+  })
+
+  initialized = true
+end
+
 
 return M

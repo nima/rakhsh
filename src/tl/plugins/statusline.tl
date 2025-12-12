@@ -1,7 +1,14 @@
 local t = require("core.types")
 global vim: t.vim.Vim
 
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local M: t.plugins.PluginModule = {}
+
+function M.keymaps(): {PluginKeymap}
+  return {}
+end
 
 local type LualineOpts = { string: any }
 local record Lualine
@@ -54,12 +61,10 @@ local function used_marks(): string
   return "'" .. table.concat(used, "")
 end
 
-function M.lazy(): t.plugins.PluginSpec
-  return {
+function M.lazy(): {PluginSpec}
+  local spec = ({
     "nvim-lualine/lualine.nvim",
     lazy = false,
-    keymaps = {},
-    dependencies = {},
     config = function()
       local _mod = "lualine"
       local mod = (require(_mod) as Lualine)
@@ -94,8 +99,10 @@ function M.lazy(): t.plugins.PluginSpec
           lualine_z = { "location" },
         },
       })
-    end
-  } as t.plugins.PluginSpec
+    end,
+  } as PluginSpec)
+
+  return { spec }
 end
 
 return M

@@ -1,12 +1,29 @@
 -- Editor-side linting helpers: trailing whitespace, etc.
 local c = require("core.config")
 local t = require("core.types")
-local keymaps = require("core.keymaps")
 local T = t.tags.Tags
 local R = t.roles.Roles
 global vim: t.vim.Vim
 
+local OnEvents = t.plugins.KeymapEvents
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local M: t.plugins.PluginModule = {}
+
+function M.keymaps(): {PluginKeymap}
+  return {
+    {
+      mode = "n",
+      role = R.Power,
+      key = "w",
+      rhs = [[mz:%s/\s\+$//e<CR>`z]],
+      desc = "Strip trailing whitespace",
+      tags = { T.TargetBuffer, T.ActionEdit },
+      on = OnEvents.Immediate,
+    },
+  }
+end
 
 local trailing_ws_match_id: integer | nil = nil
 
@@ -54,11 +71,12 @@ function M.init(): nil
     end,
   })
 
-  --+ Power move: strip trailing whitespace but keep cursor position
-  keymaps.safemap("n", R.Power, "w", [[mz:%s/\s\+$//e<CR>`z]], keymaps.opts("Strip trailing whitespace", { T.TargetBuffer, T.ActionEdit }))
-
   --+ Apply match immediately in the current window
   enable_trailing_ws_match(nil)                         
+end
+
+function M.lazy(): {PluginSpec}
+  return {}
 end
 
 return M

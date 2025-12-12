@@ -1,7 +1,10 @@
 local t = require("core.types")
 local T = t.tags.Tags
 local R = t.roles.Roles
-local On = t.plugins.KeymapEvents
+local OnEvents = t.plugins.KeymapEvents
+
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
 
 local type WhichKeyOpts = { string: any }
 
@@ -12,20 +15,18 @@ end
 
 local M: t.plugins.PluginModule = {}
 
-function M.lazy(): t.plugins.PluginSpec
+function M.keymaps(): {PluginKeymap}
   return {
+    { mode = "n", role = R.Info, key = "?", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.TargetDialogue }, on = OnEvents.Immediate },
+  }
+end
+
+function M.lazy(): {PluginSpec}
+  local spec = ({
     "folke/which-key.nvim",
     name = "which-key",
     cmd = "WhichKey",
     event = "VeryLazy",
-    keymaps = {
-      { mode = "n", role = R.Info, key = "?", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.TargetDialogue }, on = On.Immediate },
-    },
-
-    dependencies = {
-      "nvim-tree/nvim-web-devicons",
-      "echasnovski/mini.icons",
-    },
 
     config = function()
       local _mod = "which-key"
@@ -54,7 +55,9 @@ function M.lazy(): t.plugins.PluginSpec
         { "<leader>?t", mode = "n", desc = "<C-t> – Jump back" },
       }, nil)
     end,
-  } as t.plugins.PluginSpec
+  } as PluginSpec)
+
+  return { spec }
 end
 
 return M

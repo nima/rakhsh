@@ -5,6 +5,9 @@ local On = t.plugins.KeymapEvents
 
 global vim: t.vim.Vim
 
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local function open_popup_for_buffer(buf: integer)
   -- Same floating-window code you already have
   local width  = math.floor(vim.o.columns * 0.8)
@@ -64,17 +67,23 @@ local function open_popup_with_lines(lines: {string})
   open_popup_for_buffer(buf)
 end
 
---local M: t.plugins.PluginModule = {}
-local record DialoguePluginModule
+local record DialoguesModule
   init: function(): nil
-  lazy: function(): t.plugins.PluginSpec
-  open_popup_with_file: function(path: string)
-  open_popup_with_cmd: function(cmd: string)
-  open_popup_with_cmd_sandboxed: function(cmd: string)
-end
-local M: DialoguePluginModule = {}
+  lazy: function(): {PluginSpec}
+  keymaps: function(): {PluginKeymap}
 
-function M.open_popup_with_file(path: string)
+  open_popup_with_file: function(path: string): nil
+  open_popup_with_cmd: function(cmd: string): nil
+  open_popup_with_cmd_sandboxed: function(cmd: string): nil
+end
+
+local M: DialoguesModule = {}
+
+function M.init(): nil
+  return nil
+end
+
+function M.open_popup_with_file(path: string): nil
   local full = vim.fn.fnamemodify(path, ":p")  -- resolve relative → absolute
   local ok, lines_any = pcall(vim.fn.readfile, full)
   if not ok then
@@ -84,7 +93,7 @@ function M.open_popup_with_file(path: string)
   open_popup_with_lines(lines_any as {string})
 end
 
-function M.open_popup_with_cmd(cmd: string)
+function M.open_popup_with_cmd(cmd: string): nil
   -- Capture command output (Neovim 0.8+)
   local ok_exec, res = pcall(vim.api.nvim_exec2, cmd, { output = true })
   if not ok_exec or res == nil then
@@ -102,7 +111,7 @@ function M.open_popup_with_cmd(cmd: string)
   open_popup_with_lines(lines_any as {string})
 end
 
-function M.open_popup_with_cmd_sandboxed(cmd: string)
+function M.open_popup_with_cmd_sandboxed(cmd: string): nil
   -- run command isolated in a temporary tabpage to avoid UI destruction
   local api = vim.api
   local orig_tab = api.nvim_get_current_tabpage()
@@ -124,22 +133,22 @@ function M.open_popup_with_cmd_sandboxed(cmd: string)
   open_popup_for_buffer(buf)
 end
 
-function M.lazy(): t.plugins.PluginSpec
+function M.keymaps(): {PluginKeymap}
   return {
-    "nvim-treesitter/nvim-treesitter",
-    lazy = false,
-    keymaps = {
-      {
-        mode = "n",
-        role = R.Info,
-        key = "R",
-        rhs = function() M.open_popup_with_file("README.md") end,
-        desc = "RTFM",
-        tags = { T.ActionView, T.TargetBuffer },
-        on = On.Immediate,
-      }
+    {
+      mode = "n",
+      role = R.Info,
+      key = "R",
+      rhs = function() M.open_popup_with_file("README.md") end,
+      desc = "RTFM",
+      tags = { T.ActionView, T.TargetBuffer },
+      on = On.Immediate,
     },
-  } as t.plugins.PluginSpec
+  }
+end
+
+function M.lazy(): {PluginSpec}
+  return {}
 end
 
 return M
