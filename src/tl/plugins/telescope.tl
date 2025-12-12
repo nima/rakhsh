@@ -20,8 +20,7 @@ local keymaps: {t.plugins.PluginKeymap} = {
 local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
-  local keymaps_mod = require("core.keymaps")
-  local km = keymaps_mod
+  local km = require("core.keymaps")
 
   for _, m in ipairs(keymaps) do
     if m.on == On.Immediate then
