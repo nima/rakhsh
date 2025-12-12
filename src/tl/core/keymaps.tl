@@ -1,9 +1,29 @@
 local t = require("core.types")
 local hotkeys = require("core.hotkeys")
+local T = t.tags.Tags
 
 local record RakhshMapOpts
   vim_opts: t.vim.VimMapOpts
   tags: {t.tags.Tag}
+end
+
+-- Local view of the hotkeys registry item (kept in sync with core.hotkeys).
+local record RakhshKeymap
+  mode: string
+  role: t.roles.Role
+  key: string
+  internal: boolean
+  rhs: string
+  desc: string
+  tags: {t.tags.Tag}
+  group: string | nil
+end
+
+-- Minimal Telescope entry type used by our picker.
+local record TelescopeEntry
+  value: RakhshKeymap
+  display: string
+  ordinal: string
 end
 
 global vim: t.vim.Vim
@@ -19,6 +39,19 @@ local record KeymapModule
     opts: RakhshMapOpts
   ): nil
 
+  docmap: function(
+    mode: string,
+    lhs: string,
+    opts: RakhshMapOpts
+  ): nil
+
+  docmap_buf: function(
+    bufnr: integer,
+    mode: string,
+    lhs: string,
+    opts: RakhshMapOpts
+  ): nil
+
   safemap_buf: function(
     bufnr: integer,
     mode: string,
@@ -29,6 +62,8 @@ local record KeymapModule
   ): nil
 
   opts: function(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
+
+  make_entry: function(keymap: RakhshKeymap): TelescopeEntry
 end
 
 local function ensure_role(mode: string, role: t.roles.Role, key: string): nil
@@ -78,6 +113,54 @@ local function mklhs(mode: string, role: t.roles.Role, key: string): string
   end
 
   return prefix .. key
+end
+
+local function mode_cfg_for(mode: string): {t.roles.Role: string}
+  local cfg = t.roles.ActivationPrefix[mode]
+  if cfg then
+    return cfg
+  end
+
+  -- Reuse normal-mode prefixes for visual/select modes.
+  if mode == "v" or mode == "x" or mode == "s" then
+    local n_cfg = t.roles.ActivationPrefix["n"]
+    if n_cfg then
+      return n_cfg
+    end
+  end
+
+  error("keymaps: unsupported mode: " .. tostring(mode))
+end
+
+local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
+  local cfg = mode_cfg_for(mode)
+
+  -- Choose the longest matching prefix so Roles.Naked ("") doesn't shadow everything.
+  local best_role: t.roles.Role | nil = nil
+  local best_prefix: string = ""
+
+  for role, prefix in pairs(cfg) do
+    if prefix ~= "" and lhs:sub(1, #prefix) == prefix then
+      if #prefix > #best_prefix then
+        best_prefix = prefix
+        best_role = role
+      end
+    end
+  end
+
+  if best_role == nil then
+    local naked = t.roles.Roles.Naked
+    local naked_prefix = cfg[naked]
+    if naked_prefix ~= nil and lhs:sub(1, #naked_prefix) == naked_prefix then
+      best_role = naked
+      best_prefix = naked_prefix
+    else
+      error(("docmap: could not decode lhs '%s' for mode '%s'"):format(lhs, mode))
+    end
+  end
+
+  local tail = lhs:sub(#best_prefix + 1)
+  return best_role, tail
 end
 
 local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean
@@ -168,9 +251,56 @@ function M.safemap(
   hotkeys.register({
     mode = mode,
     role = role,
-    key = lhs,
+    key = key,
+    internal = true,
     rhs = rhs_str,
     desc = vim_opts.desc or "",
+    tags = tags,
+    group = nil,
+  })
+end
+
+function M.docmap(
+  mode: string,
+  lhs: string,
+  opts: RakhshMapOpts
+): nil
+  -- Existing (global) mapping may or may not exist at registration time.
+  local existing_any = vim.fn.maparg(lhs, mode, false, true)
+  local existing: t.vim.VimRawMapInfo | nil = nil
+  if existing_any ~= nil then
+    local e = existing_any as t.vim.VimRawMapInfo
+    if e.lhs ~= nil then
+      existing = e
+    end
+  end
+
+  local role, tail = decode_lhs(mode, lhs)
+
+  local rhs_str: string = "?"
+  local existing_desc: string = ""
+  if existing ~= nil then
+    local e = existing as t.vim.VimRawMapInfo
+    if e.callback ~= nil then
+      rhs_str = "<lua>"
+    else
+      rhs_str = e.rhs as string or "?"
+    end
+    existing_desc = e.desc or ""
+  end
+
+  local tags: {t.tags.Tag} = {}
+  table.move(opts.tags, 1, #opts.tags, 1, tags)
+  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
+  tags[#tags + 1] = T.External
+
+  hotkeys.register({
+    mode = mode,
+    role = role,
+    key = tail,
+    internal = false,
+    rhs = rhs_str,
+    desc = (opts.vim_opts.desc or existing_desc),
     tags = tags,
     group = nil,
   })
@@ -207,9 +337,61 @@ function M.safemap_buf(
   hotkeys.register({
     mode = mode,
     role = role,
-    key = lhs,
+    key = key,
+    internal = true,
     rhs = rhs_str,
     desc = (merged as t.vim.VimMapOpts).desc,
+    tags = tags,
+    group = nil,
+  })
+end
+
+function M.docmap_buf(
+  bufnr: integer,
+  mode: string,
+  lhs: string,
+  opts: RakhshMapOpts
+): nil
+  local existing = find_buf_map(bufnr, mode, lhs)
+
+  -- Some mappings (notably Neovim runtime defaults) can be visible via maparg even when
+  -- nvim_buf_get_keymap doesn't report them the way we expect. Fall back to maparg.
+  if existing == nil then
+    local any = vim.fn.maparg(lhs, mode, false, true)
+    if any ~= nil then
+      local e = any as t.vim.VimRawMapInfo
+      if e.lhs ~= nil then
+        existing = e
+      end
+    end
+  end
+
+  local role, tail = decode_lhs(mode, lhs)
+
+  local rhs_str: string = "?"
+  local existing_desc: string = ""
+  if existing ~= nil then
+    local e = existing as t.vim.VimRawMapInfo
+    if e.callback ~= nil then
+      rhs_str = "<lua>"
+    else
+      rhs_str = e.rhs as string or "?"
+    end
+    existing_desc = e.desc or ""
+  end
+
+  local tags: {t.tags.Tag} = {}
+  table.move(opts.tags, 1, #opts.tags, 1, tags)
+  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
+  tags[#tags + 1] = T.External
+
+  hotkeys.register({
+    mode = mode,
+    role = role,
+    key = tail,
+    internal = false,
+    rhs = rhs_str,
+    desc = (opts.vim_opts.desc or existing_desc),
     tags = tags,
     group = nil,
   })
@@ -232,6 +414,31 @@ function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
   }
 
   return out
+end
+
+
+function M.make_entry(keymap: RakhshKeymap): TelescopeEntry
+  -- `keymap.key` is the role-local tail; reconstruct the real lhs for display/search.
+  local lhs = mklhs(keymap.mode, keymap.role, keymap.key)
+
+  local tags_str = ""
+  for i, tag in ipairs(keymap.tags) do
+    if i == 1 then
+      tags_str = tag.tid
+    else
+      tags_str = tags_str .. " " .. tag.tid
+    end
+  end
+
+  local desc = keymap.desc or ""
+  local rhs  = keymap.rhs  or ""
+
+  return {
+    value = keymap,
+    display = string.format("%s  %s", lhs, desc),
+    -- Search should match key sequence, description, rhs/command, and tags.
+    ordinal = table.concat({ lhs, desc, rhs, tags_str }, " "),
+  } as TelescopeEntry
 end
 
 return M

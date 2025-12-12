@@ -9,12 +9,49 @@ local record RakhshKeymap
   mode: string
   role: t.roles.Role
   key: string
+  internal: boolean
   rhs: string
   desc: string
   tags: { t.tags.Tag }
   group: string | nil  -- optional logical grouping
 end
 local registry: {RakhshKeymap} = {}
+
+local function lhs_for(mode: string, role: t.roles.Role, key: string): string
+  local mode_cfg = t.roles.ActivationPrefix[mode]
+  if not mode_cfg then
+    -- Visual/select modes can reuse normal-mode prefixes.
+    if mode == "v" or mode == "x" or mode == "s" then
+      mode_cfg = t.roles.ActivationPrefix["n"]
+    end
+  end
+  if not mode_cfg then
+    -- Don't crash the picker; just show the raw key.
+    return key
+  end
+
+  local prefix = mode_cfg[role]
+
+  -- If the role isn't defined for this mode, fall back to normal-mode prefixes for v/x/s.
+  if not prefix and (mode == "v" or mode == "x" or mode == "s") then
+    local n_cfg = t.roles.ActivationPrefix["n"]
+    if n_cfg then
+      prefix = n_cfg[role]
+    end
+  end
+
+  -- Still unknown: don't crash; show the raw key.
+  if not prefix then
+    return key
+  end
+
+  -- Insert META special-case: <C-x>
+  if mode == "i" and prefix == "<C-" then
+    return prefix .. key .. ">"
+  end
+
+  return prefix .. key
+end
 
 local function format_tags(tags: { t.tags.Tag }): string
   if tags == nil or #tags == 0 then
@@ -46,9 +83,9 @@ end
 local type TelescopeMapFn = function(mode: string, lhs: string, fn: function(integer): nil): nil
 
 local keymaps = {
-  { mode = "n", role = R.Naked, key = "<C-F5>", rhs = "<cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-Space>", rhs = "<cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-c>", rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-F5>", internal = true, rhs = "<cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-Space>", internal = true, rhs = "<cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-c>", internal = true, rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
 }
 
 local record RakhshHotkeysCore
@@ -106,7 +143,8 @@ function M.show_help(): nil
 
   -- Highlight groups for the RakhshKeys columns
   vim.api.nvim_set_hl(0, "RakhshKeyMode", { link = "Type" })
-  vim.api.nvim_set_hl(0, "RakhshKeyKey",  { link = "ErrorMsg" })
+  vim.api.nvim_set_hl(0, "RakhshKeyKeySafe", { bold = true, link = "ErrorMsg" })
+  vim.api.nvim_set_hl(0, "RakhshKeyKeyDoc",  { italic = true, link = "Comment" })
   vim.api.nvim_set_hl(0, "RakhshKeyDesc", { link = "String" })
   vim.api.nvim_set_hl(0, "RakhshKeyTags", { link = "Keyword" })
 
@@ -117,7 +155,7 @@ function M.show_help(): nil
 
     return displayer({
       { m.mode,       "RakhshKeyMode" },
-      { m.key,        "RakhshKeyKey" },
+      { lhs_for(m.mode, m.role, m.key), (m.internal and "RakhshKeyKeySafe" or "RakhshKeyKeyDoc") },
       { desc,         "RakhshKeyDesc" },
       { tags_suffix,  "RakhshKeyTags" },
     })
@@ -129,7 +167,14 @@ function M.show_help(): nil
       results = registry,
       entry_maker = function(m: RakhshKeymap): any
         local tags_suffix = format_tags(m.tags)
-        local ordinal = m.mode .. " " .. m.key .. " " .. (m.desc or "") .. " " .. tags_suffix
+        local lhs = lhs_for(m.mode, m.role, m.key)
+        local ordinal = table.concat({
+          m.mode,
+          lhs,
+          (m.desc or ""),
+          (m.rhs or ""),
+          tags_suffix,
+        }, " ")
         return {
           value = m,
           ordinal = ordinal,
@@ -145,7 +190,7 @@ function M.show_help(): nil
         if entry_any ~= nil then
           local entry = entry_any as TelescopeEntry
           local keymap = entry.value
-          local lhs = keymap.key
+          local lhs = lhs_for(keymap.mode, keymap.role, keymap.key)
           local keys = vim.api.nvim_replace_termcodes(lhs, true, false, true)
           vim.api.nvim_feedkeys(keys, "n", false)
         end
