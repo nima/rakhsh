@@ -47,6 +47,9 @@ local record TagTable
     ViaMRU: Tag
     ViaDialogue: Tag
     ViaDebug: Tag
+
+    --+ Other
+    External: Tag
 end
 
 local Tags: TagTable = {
@@ -96,6 +99,9 @@ local Tags: TagTable = {
     ViaMRU            = { tid = "v/mru" },      -- prioritize MRU
     ViaDialogue       = { tid = "v/dialog" },   -- dialogue
     ViaDebug          = { tid = "v/dbg" },      -- in debugging context
+
+    --+ Other
+    External          = { tid = "extern" },     -- External keymaps that we merely document in registry
 }
 setmetatable(Tags, { __newindex = function() error("Cannot add new enum values to Tags") end })
 
