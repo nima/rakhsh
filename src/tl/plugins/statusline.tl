@@ -4,12 +4,6 @@ global vim: t.vim.Vim
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
-local M: t.plugins.PluginModule = {}
-
-function M.keymaps(): {PluginKeymap}
-  return {}
-end
-
 local type LualineOpts = { string: any }
 local record Lualine
   setup: function(LualineOpts | nil): nil
@@ -59,6 +53,14 @@ local function used_marks(): string
   end
   if #used == 0 then return "" end
   return "'" .. table.concat(used, "")
+end
+
+--------------------------------------------------------------------------------
+
+local M: t.plugins.PluginModule = {}
+
+function M.keymaps(): {PluginKeymap}
+  return {}
 end
 
 function M.lazy(): {PluginSpec}

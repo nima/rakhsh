@@ -1,7 +1,7 @@
 local t = require("core.types")
 local hotkeys = require("core.hotkeys")
-local T = t.tags.Tags
 
+--= Types -={ 
 local record RakhshMapOpts
   vim_opts: t.vim.VimMapOpts
   tags: {t.tags.Tag}
@@ -65,7 +65,9 @@ local record KeymapModule
 
   make_entry: function(keymap: RakhshKeymap): TelescopeEntry
 end
+-- }=-
 
+--= Private Interface -={
 local function ensure_role(mode: string, role: t.roles.Role, key: string): nil
   if type(role) ~= "table" or role.name == nil then
     local caller = debug.getinfo(4, "Sl")
@@ -209,14 +211,23 @@ local function collisions(_existing: t.vim.VimRawMapInfo | nil, mode: string, lh
   ))
 end
 
-local function find_buf_map(bufnr: integer, mode: string, lhs: string): t.vim.VimRawMapInfo | nil
+local function find_buf_map(bufnr: integer, mode: string, lhs: string, fallback?: boolean): t.vim.VimRawMapInfo | nil
   local maps = (vim.api.nvim_buf_get_keymap(bufnr, mode) as {t.vim.VimRawMapInfo})
   for _, info in ipairs(maps) do
     if info.lhs == lhs then return info end
   end
-  return nil
-end
 
+  if not fallback then return nil end
+
+  local any = vim.fn.maparg(lhs, mode, false, true)
+  if any == nil then return nil end
+
+  local e = any as t.vim.VimRawMapInfo
+  if e.lhs ~= nil then return e end
+end
+-- }=-
+
+--= Public Interface -={
 local M: KeymapModule = {
   Roles = t.roles.Roles,
   Tags  = t.tags.Tags,
@@ -244,10 +255,6 @@ function M.safemap(
     rhs_str = "<lua>"
   end
 
-  local tags: {t.tags.Tag} = {}
-  table.move(opts.tags, 1, #opts.tags, 1, tags)
-  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
-
   hotkeys.register({
     mode = mode,
     role = role,
@@ -255,7 +262,7 @@ function M.safemap(
     internal = true,
     rhs = rhs_str,
     desc = vim_opts.desc or "",
-    tags = tags,
+    tags = t.roles.complete(role, opts.tags, false),
     group = nil,
   })
 end
@@ -289,11 +296,6 @@ function M.docmap(
     existing_desc = e.desc or ""
   end
 
-  local tags: {t.tags.Tag} = {}
-  table.move(opts.tags, 1, #opts.tags, 1, tags)
-  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
-  tags[#tags + 1] = T.External
-
   hotkeys.register({
     mode = mode,
     role = role,
@@ -301,7 +303,7 @@ function M.docmap(
     internal = false,
     rhs = rhs_str,
     desc = (opts.vim_opts.desc or existing_desc),
-    tags = tags,
+    tags = t.roles.complete(role, opts.tags, false),
     group = nil,
   })
 end
@@ -330,10 +332,6 @@ function M.safemap_buf(
     rhs_str = "<lua>"
   end
 
-  local tags: {t.tags.Tag} = {}
-  table.move(opts.tags, 1, #opts.tags, 1, tags)
-  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
-
   hotkeys.register({
     mode = mode,
     role = role,
@@ -341,7 +339,7 @@ function M.safemap_buf(
     internal = true,
     rhs = rhs_str,
     desc = (merged as t.vim.VimMapOpts).desc,
-    tags = tags,
+    tags = t.roles.complete(role, opts.tags, false),
     group = nil,
   })
 end
@@ -352,19 +350,10 @@ function M.docmap_buf(
   lhs: string,
   opts: RakhshMapOpts
 ): nil
-  local existing = find_buf_map(bufnr, mode, lhs)
-
-  -- Some mappings (notably Neovim runtime defaults) can be visible via maparg even when
-  -- nvim_buf_get_keymap doesn't report them the way we expect. Fall back to maparg.
-  if existing == nil then
-    local any = vim.fn.maparg(lhs, mode, false, true)
-    if any ~= nil then
-      local e = any as t.vim.VimRawMapInfo
-      if e.lhs ~= nil then
-        existing = e
-      end
-    end
-  end
+  -- Some mappings (notably Neovim runtime defaults) can be visible via maparg
+  -- even when vim_buf_get_keymap doesn't report them the way expected. Fall
+  -- back to maparg (by setting fallback to true).
+  local existing = find_buf_map(bufnr, mode, lhs, true)
 
   local role, tail = decode_lhs(mode, lhs)
 
@@ -380,11 +369,6 @@ function M.docmap_buf(
     existing_desc = e.desc or ""
   end
 
-  local tags: {t.tags.Tag} = {}
-  table.move(opts.tags, 1, #opts.tags, 1, tags)
-  tags[#tags + 1] = { tid = role.tag } as t.tags.Tag
-  tags[#tags + 1] = T.External
-
   hotkeys.register({
     mode = mode,
     role = role,
@@ -392,7 +376,7 @@ function M.docmap_buf(
     internal = false,
     rhs = rhs_str,
     desc = (opts.vim_opts.desc or existing_desc),
-    tags = tags,
+    tags = t.roles.complete(role, opts.tags, false),
     group = nil,
   })
 end
@@ -442,3 +426,4 @@ function M.make_entry(keymap: RakhshKeymap): TelescopeEntry
 end
 
 return M
+-- }=-

@@ -33,22 +33,22 @@ vim.opt.relativenumber = true
 vim.g.mapleader = " "
 
 local record AutocmdOpts
-    group: integer
-    pattern: string
-    callback: function(): nil
+  group: integer
+  pattern: string
+  callback: function(): nil
 end
 
 local record AugroupOpts
-    clear: boolean
+  clear: boolean
 end
 
 local record NvimApi
-    nvim_create_augroup: function(name: string, opts: AugroupOpts): integer
-    nvim_create_autocmd: function(event: string, opts: AutocmdOpts): integer
+  nvim_create_augroup: function(name: string, opts: AugroupOpts): integer
+  nvim_create_autocmd: function(event: string, opts: AutocmdOpts): integer
 end
 
 local record FormatOptions
-    remove: function(self: FormatOptions, items: {string}): nil
+  remove: function(self: FormatOptions, items: {string}): nil
 end
 
 local api: NvimApi = vim.api as NvimApi
@@ -56,26 +56,28 @@ local api: NvimApi = vim.api as NvimApi
 --Comment defaults
 local group = api.nvim_create_augroup("rakhsh_auto_comments", { clear = true })
 api.nvim_create_autocmd("FileType", {
-    group = group,
-    pattern = "*",
-    callback = function(): nil
-        local fo: FormatOptions = vim.opt_local.formatoptions as FormatOptions
-        fo:remove({ "c", "r", "o" })
-    end,
+  group = group,
+  pattern = "*",
+  callback = function(): nil
+    local fo: FormatOptions = vim.opt_local.formatoptions as FormatOptions
+    fo:remove({ "c", "r", "o" })
+  end,
 })
 
 local line_group = api.nvim_create_augroup("rakhsh_line_numbers", { clear = true })
 api.nvim_create_autocmd("BufWinEnter", {
-    group = line_group,
-    pattern = "*",
-    callback = function(): nil
-        if vim.bo[0].buftype == "" and vim.bo[0].filetype ~= "rakhsh-splash" then
-            vim.wo[0].number = true
-            vim.wo[0].relativenumber = true
-            vim.wo[0].fillchars = "eob:~"
-            vim.api.nvim_set_hl(0, "EndOfBuffer", { link = "NonText" })
-        end
-    end,
+  group = line_group,
+  pattern = "*",
+  callback = function(): nil
+    if vim.bo[0].buftype ~= "" then return end 
+    if vim.bo[0].filetype == "rakhsh-splash" then return end
+    vim.wo[0].number = true
+    vim.wo[0].relativenumber = true
+    vim.wo[0].fillchars = "eob:~"
+    vim.api.nvim_set_hl(0, "EndOfBuffer", { link = "NonText" })
+    vim.opt_local.foldmethod = "expr"
+    vim.opt_local.foldexpr   = "v:lua.require('core.foldexpr').expr()"
+  end,
 })
 
 vim.notify("[core.options] LOADED", vim.log.levels.INFO, {})

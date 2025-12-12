@@ -1,3 +1,7 @@
+local _tags = require("core.types.tags")
+local T = _tags.Tag
+local Ts = _tags.Tags
+
 local record Role
   name: string
   tag: string
@@ -61,10 +65,19 @@ local ActivationPrefix: {string: {Role: string}} = {
 }
 setmetatable(ActivationPrefix, { __newindex = function() error("Cannot add new enum values to Roles") end })
 
+local function complete(role: Role, tags: {T}, external: boolean): {T}
+  local out: {T} = {}
+  table.move(tags, 1, #tags, 1, out)
+  out[#out + 1] = { tid = role.tag } as T
+  if external then out[#out + 1] = Ts.External end
+  return out
+end
+
 local M = {
     Role             = Role,
     Roles            = Roles,
     ActivationPrefix = ActivationPrefix,
+    complete         = complete,
 }
 
 return M

@@ -2,14 +2,6 @@ local t = require("core.types")
 
 global vim: t.vim.Vim
 
---[[
-local function get_win_size(win: integer): (integer, integer)
-  local width = vim.api.nvim_win_get_width(win)
-  local height = vim.api.nvim_win_get_height(win)
-  return width, height
-end
-]]
-
 local function get_ui_size(): (integer, integer)
   --+ In remote-ui flows, window sizing can be wrong until a UI attaches.
   --+ vim.o.columns/lines reflect the attached UI grid size.
@@ -23,7 +15,7 @@ local function center_lines(lines: {string}, width: integer, height: integer): {
 
   local padded = {} as {string}
 
-  -- vertical centering
+  --+ vertical centering
   local top_pad = 0
   if height > #lines then
     top_pad = math.floor((height - #lines) / 2)
@@ -32,7 +24,7 @@ local function center_lines(lines: {string}, width: integer, height: integer): {
     table.insert(padded, "")
   end
 
-  -- horizontal centering (use display width, not byte length)
+  --+ horizontal centering (use display width, not byte length)
   for _, l in ipairs(lines) do
     local lw = vim.fn.strdisplaywidth(l)
     local pad = 0
@@ -50,6 +42,7 @@ local function setup_splash_buffer(buf: integer): nil
   vim.bo[buf].bufhidden  = "wipe"
   vim.bo[buf].swapfile   = false
   vim.bo[buf].modifiable = true
+  vim.bo[buf].readonly   = false
   vim.bo[buf].filetype   = "rakhsh-splash"
 end
 
@@ -64,6 +57,7 @@ local function setup_splash_window(win: integer): nil
 end
 
 local function setup_splash_exit_on_insert(buf: integer): nil
+  vim.b[buf].rakhsh_splash_armed = false
   vim.api.nvim_create_autocmd("InsertEnter", {
     buffer = buf,
     once = true,
@@ -75,8 +69,24 @@ local function setup_splash_exit_on_insert(buf: integer): nil
       vim.bo[buf].bufhidden = ""
       vim.bo[buf].swapfile  = true
       vim.bo[buf].filetype  = ""
+      vim.bo[buf].readonly   = false
+      vim.bo[buf].modifiable = true
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "" })
-      vim.bo[buf].modified = false
+    end,
+  })
+  -- Keep the splash "static": allow user to press `q` or `i`, but don't let cursor roam.
+  vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    buffer = buf,
+    callback = function(): nil
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      if vim.b[buf].rakhsh_splash_armed ~= true then return end
+
+      -- If this buffer is no longer in the current window, don't fight other windows.
+      local win = vim.api.nvim_get_current_win()
+      if vim.api.nvim_win_get_buf(win) ~= buf then return end
+
+      -- Pin cursor to the first line/col.
+      vim.api.nvim_win_set_cursor(win, { 1, 0 })
     end,
   })
 end
@@ -87,18 +97,22 @@ local function setup_splash_keymaps(buf: integer): nil
 end
 
 local function read_splash_lines(): {string}
-  local ok, datadir = pcall(vim.fn.stdpath, "data")
-  if not ok then return {} end
+  local candidates = {
+    vim.fn.stdpath("config") .. "/splash.txt",
+    vim.fn.stdpath("data") .. "/splash.txt",
+  }
 
-  local path = datadir .. "/splash.txt"
-  local fh = io.open(path, "r")
-  if fh == nil then return {} end
+  for _, path in ipairs(candidates) do
+    local fh = io.open(path, "r")
+    if fh ~= nil then
+      local lines = {} as {string}
+      for line in fh:lines() do table.insert(lines, line) end
+      fh:close()
+      return lines
+    end
+  end
 
-  local lines = {} as {string}
-  for line in fh:lines() do table.insert(lines, line) end
-  fh:close()
-
-  return lines
+  return {}
 end
 
 local function should_show_splash_now(buf: integer): boolean
@@ -120,7 +134,24 @@ local function should_show_splash_now(buf: integer): boolean
   return first == ""
 end
 
+local function any_real_file_buffer_exists(): boolean
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted then
+      if vim.bo[b].buftype == "" then
+        local name = vim.api.nvim_buf_get_name(b)
+        if name ~= "" then
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
+
 local function show_rakhsh_splash(): nil
+  -- If any real file buffer already exists (e.g. user opened a file quickly), never show.
+  if any_real_file_buffer_exists() then return end
+
   local buf = vim.api.nvim_get_current_buf()
   if not should_show_splash_now(buf) then return end
 
@@ -137,46 +168,46 @@ local function show_rakhsh_splash(): nil
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
   vim.bo[buf].modified = false
+  vim.bo[buf].modifiable = true
+  vim.bo[buf].readonly   = false
 
   setup_splash_exit_on_insert(buf)
   setup_splash_keymaps(buf)
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(buf) then
+      vim.b[buf].rakhsh_splash_armed = true
+    end
+  end)
 end
+
+--------------------------------------------------------------------------------
 
 local M = {}
 
 function M.setup(): nil
-  local argc = vim.fn.argc()
-  local buf = vim.api.nvim_get_current_buf()
-  local bt = vim.bo[buf].buftype
-  local line_count = vim.api.nvim_buf_line_count(buf)
+  -- Only ever consider splash when no files were passed on the CLI.
+  if vim.fn.argc() ~= 0 then return end
 
-  -- Rakhsh startup splash (only when no files are passed and the
-  -- initial buffer is still an empty, normal buffer). Some setups
-  -- report 0 lines at this point, others report a single empty line,
-  -- so we treat both as "empty". We schedule the actual splash render
-  -- on UIEnter so the final UI grid size is known for centering.
-  local want_splash = false
-  if argc == 0 and bt == "" then
-    if line_count == 0 then
-      want_splash = true
-    elseif line_count == 1 then
-      local first = (vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or "")
-      if first == "" then
-        want_splash = true
-      end
-    end
+  local function show(): nil
+    vim.schedule(function()
+      show_rakhsh_splash()
+    end)
   end
 
-  if want_splash then
-    vim.api.nvim_create_autocmd("UIEnter", {
-      once = true,
-      callback = function()
-        vim.schedule(function()
-          show_rakhsh_splash()
-        end)
-      end,
-    })
+  -- If this module is loaded after the UI already attached (lazy-loading), UIEnter already fired.
+  -- In that case, show immediately.
+  if #vim.api.nvim_list_uis() > 0 then
+    show()
+    return
   end
+
+  -- Otherwise wait for a UI to attach so the final grid size is known for centering.
+  vim.api.nvim_create_autocmd("UIEnter", {
+    once = true,
+    callback = function()
+      show()
+    end,
+  })
 end
 
 return M

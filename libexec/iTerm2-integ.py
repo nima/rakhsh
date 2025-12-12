@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from contextlib import AsyncContextDecorator
 import json
 import os
 
@@ -8,6 +9,7 @@ PROFILE_GUID = "8B6A6C58-7E18-4A32-B4C1-5F8A3A9E7F01"
 PROFILE_NAME = "Rakhsh"
 NERD_FONT = "0xProtoNFP-Regular 20"
 
+# -=<
 def regex() -> str:
     #@ https://regex101.com/r/NSIXLe/1
     langs = ["cxx", "cpp", "cc", "c", "hpp", "hh", "h", "py", "sh", "lua", "tl", "txt"]
@@ -75,6 +77,7 @@ def main():
     json_path = os.path.join(dyn_dir, "rakhsh.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+# >=-
 
 
 if __name__ == "__main__":

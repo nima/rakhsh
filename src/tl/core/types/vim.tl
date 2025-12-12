@@ -5,6 +5,7 @@ local type VimScope    = { string  : any }
 local record RakhshStateBuffer
   dirty: boolean | nil
   position: VimCursorPosition | nil
+  rakhsh_splash_armed: boolean | nil
 end
 
 local record Vim
@@ -85,6 +86,7 @@ local record VimFn
   len: function({any}): integer
   getenv: function(varname: string): string | nil
   strdisplaywidth: function(str: string): integer
+  foldclosed: function(string): integer
 end
 
 local type VimCursorPosition = { integer, integer }
@@ -134,6 +136,7 @@ local record VimApi
   nvim_get_current_tabpage: function(): integer
   nvim_set_current_tabpage: function(tabpage: integer): nil
   nvim_buf_delete: function(bufnr: integer, opts: {string:any}): nil
+  nvim_del_autocmd: function(autocmd_id: integer): nil
 end
 
 local record VimBo
@@ -153,6 +156,7 @@ local record VimBo
   modified: boolean
   swapfile: boolean
   buflisted: boolean
+  readonly: boolean
 end
 
 local record VimTreesitter
@@ -194,6 +198,11 @@ end
 local record VimOptLocal
   formatoptions: any
   iskeyword: VimOptionList
+  foldmethod: string
+  foldexpr: string
+  foldenable: boolean
+  foldlevel: integer
+  foldlevelstart: integer
 end
 
 local record VimOpt
