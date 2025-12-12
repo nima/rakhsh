@@ -2,3 +2,5 @@
 .deps
 build
 Pipfile
+package-lock.json
+package.json

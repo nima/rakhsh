@@ -1,8 +1,8 @@
 --+ Minimal Rakhsh folds: color markers + fold toggle. No Treesitter.
 local t = require("core.types")
 local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local T = t.tags.Tags
+local R = t.roles.Roles
 global vim: t.vim.Vim
 
 --+ Define highlight groups

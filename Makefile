@@ -35,14 +35,14 @@ cache = $(shell mkdir -p /tmp/$(NVIM_APPNAME); echo "/tmp/rakhsh.$(1)")
 ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
 ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
 
-RAKHSH_CONFIG := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
-RAKHSH_DATA   := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
-RAKHSH_STATE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
-RAKHSH_CACHE  := $(shell $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
+RAKHSH_CONFIG := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
+RAKHSH_DATA   := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
+RAKHSH_STATE  := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
+RAKHSH_CACHE  := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)
 RAKHSH_SOCKET := $(RAKHSH_STATE)/server.pipe
 RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
 RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
-RAKHSH_ZSHRC  := $(PWD)/dot.d/dot.zshrc
+RAKHSH_ZSHRC  := $(HOME)/.zshrc.d/rakhsh.zsh
 
 brew     := $(shell command -v brew || exit 2)
 luarocks := $(shell command -v luarocks || exit 1)
@@ -201,6 +201,7 @@ build: pre-validate
 	@echo -e "[$(call blue,$@)]"
 	@rm -rf build
 	@mkdir -p build
+	@mkdir -p $(RAKHSH_CACHE)
 	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
 	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ build/lua/
 .PHONY: build
@@ -211,7 +212,9 @@ iTerm2:
 	@libexec/iTerm2-integ.py
 .PHONY: iTerm2 iTerm2.regex
 
-link:; @ln -sf $(RAKHSH_ZSHRC) ~/.zshrc.d/rakhsh.zsh
+link:
+	@mkdir -p ~/.zshrc.d/
+	@ln -sf $(PWD)/dot.d/dot.zshrc $(RAKHSH_ZSHRC)
 .PHONY: link
 
 splash:
@@ -220,9 +223,11 @@ splash:
 	@cat src/data/support.txt >> $(RAKHSH_SPLASH)
 .PHONY: splash
 
-$(RAKHSH_LAZY):; @bin/rx
+$(RAKHSH_LAZY):
+	@bin/rx
+	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to `Rakhsh`"
 install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
-	@echo -e "[$(call green,$@)]"
+	@echo -e "[$(call green,$@)] Install complete"
 .PHONY: install
 
 $(RAKHSH_CONFIG): build
@@ -246,17 +251,20 @@ unlink:; rm -f ~/.zshrc.d/rakhsh.zsh
 .PHONY: unlink
 
 uninstall: clean unlink
-	@echo -e "[$(call black,$@)]"
 	rm -f "$(ITERM2_DYN_PROF)"
 	rm -rf $(RAKHSH_CONFIG)
 	rm -f ~/bin/rx
+	@echo -e "[$(call black,$@)] Uninstall complete"
 .PHONY: uninstall
 
 purge: uninstall
-	@echo -e "[$(call black,$@)]"
 	rm -rf $(RAKHSH_DATA)
 	rm -rf $(RAKHSH_CONFIG)
 	rm -rf $(RAKHSH_SOCKET)
+	rm -rf $(RAKHSH_STATE)
+	rm -rf $(RAKHSH_CACHE)
+	rm -f $(RAKHSH_ZSHRC)
+	@echo -e "[$(call black,$@)] Purge complete"
 .PHONY: purge
 
 clean:
@@ -265,24 +273,44 @@ clean:
 .PHONY: clean
 
 ################################################################################
+# Internal/Development/Experimental
 
-ide: reinstall
-	@echo -e "[$(call yellow,$@)]"
-	@echo -e "[$(call green,$@)]"
-	$(rx)
-
-lazy:
-	@echo -e "[$(call magenta,$@)]"
-	@echo -e "[$(call magenta,$@)]"
-	lsd --tree "$$($(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"), "\n")' +qa)/lazy"
+artifacts: ARTIFACTS := $(wildcard $(RAKHSH_CONFIG)) $(wildcard $(RAKHSH_DATA)) $(wildcard $(RAKHSH_STATE)) $(wildcard $(RAKHSH_CACHE)) $(wildcard $(RAKHSH_ZSHRC))
+artifacts:
+	@$(foreach d,$(ARTIFACTS),lsd -ld $d;)
+	@[[ ! -e "$(ITERM2_DYN_PROF)" ]] || lsd -ld "$(ITERM2_DYN_PROF)"
+.PHONY: artifacts
 
 ls-files:
 	@echo -e "[$(call magenta,$@:Teal)]"
 	@lsd --tree src/tl
+.PHONY: ls-files.user
+
 ls-files.user:
 	@echo -e "[$(call magenta,$@:Lua)]"
 	@lsd --tree "$(RAKHSH_CONFIG)"
-.PHONY: ls-files ls-files.user
+.PHONY: ls-files
+
+killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
+killsocket:
+	@echo -e "[$(call magenta,$@)]"
+	kill -9 $(pid)
+.PHONY: killsocket
+
+fonts:
+	sudo rm -rf /Library/Fonts/*Cache*
+	sudo rm -rf /System/Library/Fonts/*Cache*
+	rm -rf ~/Library/Fonts/*Cache*
+	rm -rf ~/Library/Caches/com.apple.FontServices
+	rm -rf ~/Library/Caches/com.apple.coretext*
+	sudo rm -rf /Library/Caches/com.apple.FontServices*
+	sudo rm -rf /Library/Caches/com.apple.coretext*
+.PHONY: fonts
+
+export PROPAGANDA := rakhsh 
+export FIGLET_FONTDIR := /opt/homebrew/share/figlet/fonts/
+figlet:; @$(foreach f,$(wildcard $(FIGLET_FONTDIR)*.flf),name=$(notdir $(f:%.flf=%));echo;echo "$$name";figlet -f $(f) $${PROPAGANDA:-$${name}};)
+.PHONY: figlet
 
 status: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
 status:
@@ -304,22 +332,3 @@ status:
 		echo;\
 	}
 .PHONY: status
-
-killsocket: pid := $(shell lsof -t $(RAKHSH_SOCKET) 2>/dev/null)
-killsocket:
-	@echo -e "[$(call magenta,$@)]"
-	kill -9 $(pid)
-
-export PROPAGANDA := rakhsh 
-export FIGLET_FONTDIR := /opt/homebrew/share/figlet/fonts/
-figlet:; @$(foreach f,$(wildcard $(FIGLET_FONTDIR)*.flf),name=$(notdir $(f:%.flf=%));echo;echo "$$name";figlet -f $(f) $${PROPAGANDA:-$${name}};)
-.PHONY: figlet
-
-fonts:
-	sudo rm -rf /Library/Fonts/*Cache*
-	sudo rm -rf /System/Library/Fonts/*Cache*
-	rm -rf ~/Library/Fonts/*Cache*
-	rm -rf ~/Library/Caches/com.apple.FontServices
-	rm -rf ~/Library/Caches/com.apple.coretext*
-	sudo rm -rf /Library/Caches/com.apple.FontServices*
-	sudo rm -rf /Library/Caches/com.apple.coretext*

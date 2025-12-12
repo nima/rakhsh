@@ -11,11 +11,10 @@ end
 
 local M: t.plugins.PluginModule = {}
 
-local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 local On = t.plugins.KeymapEvents
 local tags = { T.ActionView, T.TargetDialogue }
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   local keymaps : { PluginKeymap } = {
     { mode = "n", role = R.Toggle, key = "t", rhs = function() vim.cmd("NvimTreeToggle") end,
       desc = "File tree toggle", tags = tags, on = On.Immediate },
@@ -29,7 +28,7 @@ function M.lazy(): PluginSpec
       local mod = (require(_) as NvimTreeToggle)
       mod.setup({ view = { width = 40 } })
     end,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

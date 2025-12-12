@@ -1,77 +1,112 @@
-local record Tag _tag: string end
+local record Tag tid: string end
 local record TagTable
+    --+ Verbs / actions (what)
+    ActionSearch: Tag
+    ActionSelect: Tag
+    ActionView: Tag
+    ActionEdit: Tag
+    ActionHelp: Tag
+    ActionNavigate: Tag
+    ActionList: Tag
+    ActionToggle: Tag
+    ActionLaunch: Tag
+
+    --+ Nouns / targets (to what)
+    TargetDoc: Tag
     TargetFile: Tag
     TargetBuffer: Tag
+    TargetWindow: Tag
+    TargetTab: Tag
+    TargetProject: Tag
+    TargetWorkspace: Tag
+    TargetSymbol: Tag
+    TargetLine: Tag
+    TargetSelection: Tag
+    TargetDiagnostic: Tag
+    TargetBreakpoint: Tag
+    TargetTerminal: Tag
+    TargetTest: Tag
     TargetDialogue: Tag
-    --
-    SeekSearch: Tag
-    SeekActive: Tag
-    --
-    InputCursor: Tag
-    InputField: Tag
-    --
-    ActionHelp: Tag
-    ActionInfo: Tag
-    ActionEdit: Tag
-    ActionList: Tag
-    ActionView: Tag
-    ActionLaunch: Tag
-    ActionInstall: Tag
-    ActionToggle: Tag
-    --
-    MethodFuzzy: Tag
-    MethodRegex: Tag
-    MethodSubstr: Tag
-    --
-    BasisContent: Tag
-    BasisName: Tag
-    BasisSymbol: Tag
-    --
-    FilterGit: Tag
-    FilterGitModified: Tag
-    --
-    PrioMRU: Tag
+    TargetCursor: Tag
+    TargetField: Tag
+    TargetGit: Tag
+    TargetRepl: Tag
+    TargetShell: Tag
+
+    --+ How / method / filter / scope (how)
+    ViaFuzzy: Tag
+    ViaRegex: Tag
+    ViaSubstr: Tag
+    ViaContent: Tag
+    ViaSymbol: Tag
+    ViaName: Tag
+    ViaPath: Tag
+    ViaActive: Tag
+    ViaGit: Tag
+    ViaGitModified: Tag
+    ViaMRU: Tag
+    ViaDialogue: Tag
+    ViaDebug: Tag
 end
 
 local Tags: TagTable = {
-    -- I want to search for a
-    TargetFile        = { _tag = "t/file" },
-    TargetBuffer      = { _tag = "t/buf" },
-    --
-    SeekSearch        = { _tag = "s" },
-    SeekActive        = { _tag = "s/active" },
-    --
-    InputCursor: Tag  = { _tag = "i/cursor" },
-    InputField: Tag   = { _tag = "i/field" },
-    -- ...perform...
-    ActionHelp        = { _tag = "a/help" },
-    ActionInfo        = { _tag = "a/info" },
-    ActionEdit        = { _tag = "a/ed" },
-    ActionList        = { _tag = "a/ls" },
-    ActionView        = { _tag = "a/v" },
-    ActionLaunch      = { _tag = "a/run" },
-    ActionInstall     = { _tag = "a/inst" },
-    ActionToggle      = { _tag = "a/toggle" },
-    -- ...via..
-    MethodFuzzy       = { _tag = "m/fz" },
-    MethodRegex       = { _tag = "m/rx" },
-    MethodSubstr      = { _tag = "m/ss" },
-    -- ..by...
-    BasisContent      = { _tag = "b/data" },
-    BasisName         = { _tag = "b/name" },
-    BasisSymbol       = { _tag = "b/symbol" },
-    -- ..filtered by...
-    FilterGit         = { _tag = "f/git" },
-    FilterGitModified = { _tag = "f/git/stat" },
-    -- ..prioritize by...
-    PrioMRU           = { _tag = "p/mru" },
+    --+ Verbs / actions (what)
+    ActionSearch      = { tid = "a/search" },   -- generic search/find
+    ActionSelect      = { tid = "a/select" },   -- generic select
+    ActionView        = { tid = "a/view" },     -- view/read-only
+    ActionEdit        = { tid = "a/ed" },       -- modify/mutate
+    ActionHelp        = { tid = "a/help" },     -- help/cheatsheets/docs
+    ActionNavigate    = { tid = "a/nav" },      -- jump/move/go
+    ActionList        = { tid = "a/ls" },       -- list things
+    ActionToggle      = { tid = "a/toggle" },   -- toggle state
+    ActionLaunch      = { tid = "a/run" },      -- run/build/test/launch tools
+
+    --+ Nouns / targets (to what); ultimate prize
+    TargetDoc         = { tid = "t/doc" },      -- documentation/help
+    TargetFile        = { tid = "t/file" },     -- files on disk
+    TargetBuffer      = { tid = "t/buf" },      -- open buffers
+    TargetWindow      = { tid = "t/win" },      -- editor windows/splits
+    TargetTab         = { tid = "t/tab" },      -- tabpages
+    TargetProject     = { tid = "t/proj" },     -- project/root dir
+    TargetWorkspace   = { tid = "t/ws" },       -- multi-project workspace
+    TargetSymbol      = { tid = "t/sym" },      -- LSP/TS symbol
+    TargetLine        = { tid = "t/line" },     -- line-level operations
+    TargetSelection   = { tid = "t/sel" },      -- visual selection range
+    TargetDiagnostic  = { tid = "t/diag" },     -- diagnostics/problems
+    TargetBreakpoint  = { tid = "t/bp" },       -- debugger breakpoints
+    TargetTerminal    = { tid = "t/term" },     -- terminal buffers
+    TargetTest        = { tid = "t/test" },     -- tests/specs
+    TargetDialogue    = { tid = "t/dialog" },   -- popups/dialogue UIs
+    TargetCursor      = { tid = "t/cursor" },   -- cursor position
+    TargetField       = { tid = "t/field" },    -- input fields/prompts
+    TargetGit         = { tid = "t/git" },      -- repo/branch/commit objects
+    TargetRepl        = { tid = "t/repl" },     -- repl (ipython)
+    TargetShell       = { tid = "t/shell" },    -- shell (bash, zsh)
+
+    --+ How / method / filter / scope (how)
+    ViaFuzzy          = { tid = "v/fz" },       -- fuzzy matching
+    ViaRegex          = { tid = "v/rx" },       -- regex search
+    ViaSubstr         = { tid = "v/ss" },       -- substring search
+    ViaContent        = { tid = "v/data" },     -- search/match by content
+    ViaSymbol         = { tid = "v/symbol" },   -- search/match by symbol
+    ViaName           = { tid = "v/name" },     -- search/match by name
+    ViaPath           = { tid = "v/path" },     -- restricted to current file
+    ViaActive         = { tid = "v/active" },   -- current/active entity only
+    ViaGit            = { tid = "v/git" },      -- git-filtered view
+    ViaMRU            = { tid = "v/mru" },      -- prioritize MRU
+    ViaDialogue       = { tid = "v/dialog" },   -- dialogue
+    ViaDebug          = { tid = "v/dbg" },      -- in debugging context
 }
 setmetatable(Tags, { __newindex = function() error("Cannot add new enum values to Tags") end })
 
-local M = {
+local record TagsModule
+  Tag: Tag
+  Tags: TagTable
+end
+
+local M: TagsModule = {
   Tag      = Tag,
   Tags     = Tags,
-  TagTable = TagTable,
 }
 
 return M

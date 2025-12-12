@@ -1,8 +1,8 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
-local T = keymaps.Tags
-local R = keymaps.Roles
+local T = t.tags.Tags
+local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
+local d = require("plugins.dialogues")
 
 global vim: t.vim.Vim
 
@@ -40,19 +40,19 @@ function M.lazy(): t.plugins.PluginSpec
         role = R.TUI,
         key = "i",
         rhs = install_here,
-        desc = "TS: install parsers for this buffer",
-        tags = { T.ActionInstall, T.TargetBuffer },
+        desc = "[TreeSitter] Install parsers for this buffer",
+        tags = { T.ActionLaunch, T.TargetBuffer },
         on = On.Immediate,
       },
       {
         mode = "n",
         role = R.TUI,
         key = "?",
-        rhs = "<cmd>vsplit | TSModuleInfo<CR>",
-        desc = "TS: module info",
-        tags = { T.ActionInfo, T.TargetBuffer },
+        rhs = function() d.open_popup_with_cmd_sandboxed("TSModuleInfo") end,
+        desc = "[TreeSitter]: Module info",
+        tags = { T.ActionView, T.TargetBuffer },
         on = On.Immediate,
-      },
+      }
     },
     config = function(): nil
       local _cfg = "nvim-treesitter.configs"

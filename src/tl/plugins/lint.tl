@@ -2,8 +2,8 @@
 local c = require("core.config")
 local t = require("core.types")
 local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
+local T = t.tags.Tags
+local R = t.roles.Roles
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -55,7 +55,7 @@ function M.init(): nil
   })
 
   --+ Power move: strip trailing whitespace but keep cursor position
-  keymaps.safemap("n", R.Power, "w", [[mz:%s/\s\+$//e<CR>`z]], keymaps.opts("Strip trailing whitespace", { T.TargetBuffer, T.ActionEdit, T.BasisContent }))
+  keymaps.safemap("n", R.Power, "w", [[mz:%s/\s\+$//e<CR>`z]], keymaps.opts("Strip trailing whitespace", { T.TargetBuffer, T.ActionEdit }))
 
   --+ Apply match immediately in the current window
   enable_trailing_ws_match(nil)                         

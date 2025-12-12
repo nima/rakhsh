@@ -14,8 +14,7 @@ end
 local type PluginKeymap = t.plugins.PluginKeymap
 local On = t.plugins.KeymapEvents
 
-local type PluginSpec = t.plugins.PluginSpec
-function M.lazy(): PluginSpec
+function M.lazy(): t.plugins.PluginSpec
   local keymaps : { PluginKeymap } = {
     { mode = "n", role = R.Toggle, key = "m", rhs = "<cmd>Mtm<CR>", on = On.Immediate,
       desc = "Toggle markdown table mode", tags = { T.ActionView, T.TargetBuffer } },
@@ -30,7 +29,7 @@ function M.lazy(): PluginSpec
     lazy = false,
     config = config,
     keymaps = keymaps,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M

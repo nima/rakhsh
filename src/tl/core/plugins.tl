@@ -77,8 +77,6 @@ local record CorePluginsModule
   validate_keymaps: function(): nil
 end
 
-local type PluginModule = t.plugins.PluginModule
-
 -- Modules that define buffer-local (on-attach) keymaps and should be
 -- validated during the post-validate step.
 local validate_attach_plugins = {
@@ -96,7 +94,7 @@ local function validate_plugin_keymap(src: string, km: t.plugins.PluginKeymap): 
   if km.role == nil then
     error(("apply_plugin_keymaps[%s]: keymap missing role (key = %s, desc = %s)"):format(src, km.key or "?", km.desc or "?"), 2)
   end
-  if type(km.role) ~= "table" or km.role._tag == nil then
+  if type(km.role) ~= "table" or km.role.name == nil then
     error(("apply_plugin_keymaps[%s]: invalid role for key %s (desc = %s): %s"):format(src, km.key or "?", km.desc or "?", tostring(km.role)), 2)
   end
   if km.key == nil or km.key == "" then
@@ -114,12 +112,14 @@ local function validate_plugin_keymap(src: string, km: t.plugins.PluginKeymap): 
 end
 
 local function apply_plugin_attach_keymaps_impl(modname: string, bufnr: integer): nil
-  local mod = (require(modname) as PluginModule)
+  local mod = (require(modname) as t.plugins.PluginModule)
   if mod.lazy == nil then return nil end
 
   local spec = (mod.lazy() as KeymapSpec)
-  local keymapspecs = spec.keymaps as {t.plugins.PluginKeymap}
-  for _, km in ipairs(keymapspecs) do
+  local keymapspecs = spec.keymaps
+  if keymapspecs == nil then return nil end
+
+  for _, km in ipairs(keymapspecs as {t.plugins.PluginKeymap}) do
     if km.on == t.plugins.KeymapEvents.Attach then
       validate_plugin_keymap(("%s (attach)"):format(modname), km)
       keymaps.safemap_buf(bufnr, km.mode, km.role, km.key, km.rhs, keymaps.opts(km.desc, km.tags as {t.tags.Tag}))
@@ -128,7 +128,7 @@ local function apply_plugin_attach_keymaps_impl(modname: string, bufnr: integer)
 end
 
 local function apply_plugin_keymaps_impl(plugin_name: string): nil
-  local mod = (require(plugin_name) as PluginModule)
+  local mod = (require(plugin_name) as t.plugins.PluginModule)
   if mod.lazy == nil then return nil end
 
   local spec = (mod.lazy() as KeymapSpec)
@@ -136,26 +136,15 @@ local function apply_plugin_keymaps_impl(plugin_name: string): nil
     error(("apply_plugin_keymaps[%s]: failed to load module"):format(plugin_name), 2)
   end
 
-  local keymapspecs = spec.keymaps as {t.plugins.PluginKeymap}
-  for _, km in ipairs(keymapspecs) do
-    local effective_desc = km.desc
+  local keymapspecs = spec.keymaps
+  if keymapspecs == nil then return nil end
 
-    local rendered: {string} = {}
-    local taglist = km.tags as {t.tags.Tag}
-    for _, tag in ipairs(taglist) do
-      table.insert(rendered, "#" .. tag._tag)
-    end
-
-    if #rendered > 0 then
-      effective_desc = ("%s %s"):format(effective_desc, table.concat(rendered, " "))
-    end
+  for _, km in ipairs(keymapspecs as {t.plugins.PluginKeymap}) do
+    validate_plugin_keymap(plugin_name, km)
 
     if km.on == nil or km.on == OnEvents.Immediate then
-      local ok, err = pcall(keymaps.safemap, km.mode, km.role, km.key, km.rhs, {
-        noremap = true,
-        silent  = true,
-        desc    = effective_desc,
-      })
+      local opts = keymaps.opts(km.desc, km.tags as {t.tags.Tag})
+      local ok, err = pcall(keymaps.safemap, km.mode, km.role, km.key, km.rhs, opts)
       if not ok then
         error(("apply_plugin_keymaps[%s]: failed to install %s (%s): %s"):format(plugin_name, km.key, km.desc, tostring(err)), 2)
       end
@@ -182,7 +171,7 @@ local initialized = false
 local function ensure_initialized(): nil
   if initialized then return end
   for _, _mod in ipairs(plugs) do
-    local mod = (require(_mod) as PluginModule)
+    local mod = (require(_mod) as t.plugins.PluginModule)
     if mod.init ~= nil then mod.init() end
     if mod.lazy ~= nil then
       local spec = mod.lazy()

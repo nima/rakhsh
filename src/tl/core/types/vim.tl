@@ -12,12 +12,12 @@ local record Vim
   fn: VimFn
   keymap: VimKeymap
   loop: VimLoop
-  opt: VimOptRuntime
+  opt: VimOpt
   o: VimOptGlobal
   wo: VimWo
   g: VimGlobal
   opt_local: VimOptLocal
-  b: {RakhshStateBuffer}
+  b: {integer: RakhshStateBuffer}
   w: VimScope
   t: VimScope
   bo: {VimBo}
@@ -34,9 +34,15 @@ local record Vim
   treesitter: VimTreesitter
   --- add optional lua-level split if desired
   split: function(str: string, sep: string, opts: VimSplitOpts | nil): {string}
+  trim: function(str: string): string
 end
 
 --= Layer 1
+
+local record VimEnv
+  COLUMNS: string | nil
+  LINES: string | nil
+end
 
 local record VimSplitOpts
   plain: boolean
@@ -122,6 +128,10 @@ local record VimApi
   nvim_list_bufs: function(): {integer}
   nvim_buf_set_extmark: function(bufnr: integer, ns_id: integer, line: integer, col: integer, opts: {string:any}): integer
   nvim_buf_call: function(bufnr: integer, fn: VimCallback): any
+  nvim_replace_termcodes: function(str: string, from_part: boolean, do_lt: boolean, special: boolean): string
+  nvim_feedkeys: function(keys: string, mode: string, escape_ks: boolean): nil
+  nvim_get_current_tabpage: function(): integer
+  nvim_set_current_tabpage: function(tabpage: integer): nil
 end
 
 local record VimBo
@@ -184,6 +194,36 @@ local record VimOptLocal
   iskeyword: VimOptionList
 end
 
+local record VimOpt
+  number: boolean
+  relativenumber: boolean
+  termguicolors: boolean
+  numberwidth: integer
+  signcolumn: string
+  clipboard: string
+  mouse: string
+  laststatus: integer
+  showmode: boolean
+  cmdheight: integer
+  updatetime: integer
+  viewoptions: VimViewOptions
+  viewdir: string
+  more: boolean
+  columns: integer
+  lines: integer
+  swapfile: boolean
+  shada: string
+  shadafile: string
+  rtp: VimOptRuntimeRtp
+  modeline: boolean
+  modelines: integer
+  modelineexpr: boolean
+  scrolloff: integer
+  wrap: boolean
+  shortmess: VimOptionList
+  fillchars: string
+end
+
 local record VimOptGlobal
   number: boolean
   relativenumber: boolean
@@ -204,6 +244,13 @@ local record VimOptGlobal
   swapfile: boolean
   shada: string
   shadafile: string
+  rtp: string
+  modeline: boolean
+  modelines: integer
+  modelineexpr: boolean
+  scrolloff: integer
+  wrap: boolean
+  shortmess: string
 end
 
 local record VimLoop
@@ -218,18 +265,6 @@ local record VimViewOptions
   append: function(self: VimViewOptions, value: string): nil
   remove: function(self: VimViewOptions, value: string): nil
   get: function(self: VimViewOptions): {string}
-end
-
-local record VimOptRuntime
-  rtp: VimOptRuntimeRtp
-  modeline: boolean
-  modelines: integer
-  modelineexpr: boolean
-  viewoptions: VimViewOptions
-  scrolloff: integer
-  wrap: boolean
-  shortmess: VimOptionList
-  swapfile: boolean
 end
 
 local type VimCallback = function(ev: {string:any} | nil)
@@ -335,6 +370,7 @@ local record VimWo
   signcolumn: string
   foldcolumn: string
   list: boolean
+  fillchars: string
 end
 
 local record VimGlobal
@@ -362,12 +398,6 @@ local record VimLog
   levels: VimLogLevels
 end
 
-local record VimEnv
-  OPENAI_API_KEY: string | nil
-  COLUMNS: string | nil
-  LINES: string | nil
-end
-
 local record VimNotify
   notify: function(msg: string, level: integer | nil, opts: any): nil
 end
@@ -375,39 +405,37 @@ end
 local type AnyFunction = function(...: any): any
 
 local M = {
-  VimMapOpts          = VimMapOpts,
-  VimMapInfo          = VimMapInfo,
-  VimBufInfo          = VimBufInfo,
-  VimFn               = VimFn,
-  VimKeymap           = VimKeymap,
-  VimLoop             = VimLoop,
-  VimOptLocal         = VimOptLocal,
-  VimOptGlobal        = VimOptGlobal,
-  VimOptRuntime       = VimOptRuntime,
-  VimOptRuntimeRtp    = VimOptRuntimeRtp,
-  VimCmd              = VimCmd,
-  VimLSPProtocol      = VimLSPProtocol,
-  VimLSPBuf           = VimLSPBuf,
-  VimLSP              = VimLSP,
-  VimDiagnostic       = VimDiagnostic,
-  VimCallback         = VimCallback,
-  VimAutocmdOpts      = VimAutocmdOpts,
-  VimUserCommandOpts    = VimUserCommandOpts,
+  VimMapOpts             = VimMapOpts,
+  VimMapInfo             = VimMapInfo,
+  VimBufInfo             = VimBufInfo,
+  VimFn                  = VimFn,
+  VimKeymap              = VimKeymap,
+  VimLoop                = VimLoop,
+  VimOpt                 = VimOpt,
+  VimOptGlobal           = VimOptGlobal,
+  VimCmd                 = VimCmd,
+  VimLSPProtocol         = VimLSPProtocol,
+  VimLSPBuf              = VimLSPBuf,
+  VimLSP                 = VimLSP,
+  VimDiagnostic          = VimDiagnostic,
+  VimCallback            = VimCallback,
+  VimAutocmdOpts         = VimAutocmdOpts,
+  VimUserCommandOpts     = VimUserCommandOpts,
   VimUserCommandCallback = VimUserCommandCallback,
-  VimApi              = VimApi,
-  Vim                 = Vim,
-  VimNotify           = VimNotify,
-  VimEnv              = VimEnv,
-  VimLog              = VimLog,
-  VimRawMapInfo       = VimRawMapInfo,
-  VimLSPClientFilter  = VimLSPClientFilter,
-  VimAutocmdEvent     = VimAutocmdEvent,
-  VimCursorPosition   = VimCursorPosition,
-  VimCursorPositions  = VimCursorPositions,
-  VimWo               = VimWo,
-  AnyFunction         = AnyFunction,
-  VimViewOptions      = VimViewOptions,
-  RakhshStateBuffer   = RakhshStateBuffer,
+  VimApi                 = VimApi,
+  Vim                    = Vim,
+  VimNotify              = VimNotify,
+  VimEnv                 = VimEnv,
+  VimLog                 = VimLog,
+  VimRawMapInfo          = VimRawMapInfo,
+  VimLSPClientFilter     = VimLSPClientFilter,
+  VimAutocmdEvent        = VimAutocmdEvent,
+  VimCursorPosition      = VimCursorPosition,
+  VimCursorPositions     = VimCursorPositions,
+  VimWo                  = VimWo,
+  AnyFunction            = AnyFunction,
+  VimViewOptions         = VimViewOptions,
+  RakhshStateBuffer      = RakhshStateBuffer,
 }
 
 return M

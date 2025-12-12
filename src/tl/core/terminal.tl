@@ -1,11 +1,11 @@
 local keymaps = require("core.keymaps")
-local R = keymaps.Roles
-local T = keymaps.Tags
-
 local t = require("core.types")
+local R = t.roles.Roles
+local T = t.tags.Tags
+
 global vim: t.vim.Vim
 
-local M = {}
+local M: t.plugins.PluginModule = {}
 
 function M.init(): nil
   vim.api.nvim_create_autocmd("TermOpen", {
@@ -25,7 +25,7 @@ function M.init(): nil
     R.Power,
     "`1",
     ":terminal zsh<CR>a",
-    keymaps.opts("Zsh Terminal", { T.ActionLaunch })
+    keymaps.opts("Zsh Terminal", { T.ActionLaunch, T.TargetShell })
   )
 
   keymaps.safemap(
@@ -33,7 +33,7 @@ function M.init(): nil
     R.Power,
     "`2",
     ":terminal bash<CR>a",
-    keymaps.opts("Bash Terminal", { T.ActionLaunch })
+    keymaps.opts("Bash Terminal", { T.ActionLaunch, T.TargetShell })
   )
 end
 

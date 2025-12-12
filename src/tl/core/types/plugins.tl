@@ -4,12 +4,12 @@ local tags  = require("core.types.tags")
 local type Role = roles.Role
 local type Tag  = tags.Tag
 
-local record KeymapOn _tag: string end
+local record KeymapOn evid: string end
 local KeymapEvents: { string : KeymapOn } = {
-  Attach    = { _tag = "attach" },
-  Cmd       = { _tag = "cmd" },
-  Lazy      = { _tag = "lazy" },
-  Immediate = { _tag = "immediate" },
+  Attach    = { evid = "attach" },
+  Cmd       = { evid = "cmd" },
+  Lazy      = { evid = "lazy" },
+  Immediate = { evid = "immediate" },
 }
 setmetatable(KeymapEvents, { __newindex = function() error("Cannot add new enum values to KeymapEvents") end })
 
@@ -25,11 +25,14 @@ end
 setmetatable(PluginKeymap, { __newindex = function() error("Cannot add new enum values to PluginKeymap") end })
 
 local record PluginSpec
-  repo: string                -- the plugin name / repo
+  repo: string
   lazy: boolean | nil
   keymaps: { PluginKeymap } | nil
 end
 local record KeymapSpec
+  keymaps: { PluginKeymap }
+end
+local record KeymapModule
   keymaps: { PluginKeymap }
 end
 local record PluginModule
@@ -44,6 +47,7 @@ local M = {
   KeymapOn     = KeymapOn,
   KeymapEvents = KeymapEvents,
   KeymapSpec   = KeymapSpec,
+  KeymapModule = KeymapModule,
 }
 
 return M

@@ -1,8 +1,7 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
 local plugins = require("core.plugins")
-local R = keymaps.Roles;
-local T = keymaps.Tags;
+local T = t.tags.Tags
+local R = t.roles.Roles
 global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
@@ -17,31 +16,37 @@ local record GitSigns
   toggle_current_line_blame: function(): nil
 end
 
+local record Neogit
+  setup: function(any): nil
+  open: function(any | nil): nil
+end
+
 local type PluginKeymap = t.plugins.PluginKeymap
 local On = t.plugins.KeymapEvents
-local tags_next_prev = { T.SeekActive, T.ActionView, T.TargetBuffer, T.FilterGitModified, T.FilterGit }
-local tags_preview = { T.ActionView, T.TargetBuffer, T.FilterGitModified, T.FilterGit }
-local tags_blame = { T.ActionView, T.TargetBuffer, T.BasisContent, T.FilterGit }
-local tags_toggle = { T.ActionLaunch, T.TargetBuffer, T.FilterGit }
-local type PluginSpec = t.plugins.PluginSpec
-local _mod = "gitsigns"
-function M.lazy(): PluginSpec
-  local function gs(): GitSigns return (require(_mod) as GitSigns) end
+local _gs = "gitsigns"
+local _ng = "neogit"
+function M.lazy(): t.plugins.PluginSpec
+  local function gs(): GitSigns return (require(_gs) as GitSigns) end
+  local function ng(): Neogit return (require(_ng) as Neogit) end
   local km : { PluginKeymap } = {
-    { mode = "n", role = R.Go,    key = "]", rhs = function() gs().next_hunk() end,                 desc = "Next git hunk",             tags = tags_next_prev, on = On.Attach },
-    { mode = "n", role = R.Go,    key = "[", rhs = function() gs().prev_hunk() end,                 desc = "Prev git hunk",             tags = tags_next_prev, on = On.Attach },
-    { mode = "n", role = R.GoVia, key = "p", rhs = function() gs().preview_hunk() end,              desc = "Preview git hunk",          tags = tags_preview,   on = On.Attach },
-    { mode = "n", role = R.SCM,   key = "b", rhs = function() gs().blame_line() end,                desc = "Git blame line",            tags = tags_blame,     on = On.Attach },
-    { mode = "n", role = R.SCM,   key = "B", rhs = function() gs().toggle_current_line_blame() end, desc = "Toggle current line blame", tags = tags_toggle,    on = On.Attach },
+    { mode = "n", role = R.Go,    key = "]", on = On.Attach, rhs = function() gs().next_hunk() end,                 tags = { T.ActionView, T.TargetBuffer },    desc = "Next git hunk"             },
+    { mode = "n", role = R.Go,    key = "[", on = On.Attach, rhs = function() gs().prev_hunk() end,                 tags = { T.ActionView, T.TargetBuffer },    desc = "Prev git hunk"             },
+    { mode = "n", role = R.GoVia, key = "p", on = On.Attach, rhs = function() gs().preview_hunk() end,              tags = { T.ActionView, T.TargetBuffer },    desc = "Preview git hunk"          },
+    { mode = "n", role = R.SCM,   key = "b", on = On.Attach, rhs = function() gs().blame_line() end,                tags = { T.ActionView, T.TargetBuffer },    desc = "Git blame line"            },
+    { mode = "n", role = R.SCM,   key = "B", on = On.Attach, rhs = function() gs().toggle_current_line_blame() end, tags = { T.ActionLaunch, T.TargetBuffer },  desc = "Toggle current line blame" },
+    { mode = "n", role = R.SCM,   key = "s", on = On.Attach, rhs = function() ng().open(nil) end,                     tags = { T.ActionLaunch, T.TargetProject }, desc = "Neogit status"             },
+    { mode = "n", role = R.SCM,   key = "c", on = On.Attach, rhs = function() ng().open({ "commit" }) end,            tags = { T.ActionLaunch, T.TargetProject }, desc = "Neogit commit"             },
   }
   return {
     "lewis6991/gitsigns.nvim",
+    dependencies = {
+      { "NeogitOrg/neogit", config = function() ng().setup({}) end },
+    },
     event = { "BufReadPre", "BufNewFile" },
     lazy = false,
     keymaps = km,
     config = function()
-      local mod = (require(_mod) as GitSigns)
-      mod.setup({
+      gs().setup({
         signs = {
           add          = { text = "+" },
           change       = { text = "~" },
@@ -59,7 +64,7 @@ function M.lazy(): PluginSpec
         end,
       })
     end,
-  } as PluginSpec
+  } as t.plugins.PluginSpec
 end
 
 return M
