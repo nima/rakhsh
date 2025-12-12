@@ -58,6 +58,16 @@ local function mklhs(mode: string, role: t.roles.Role, key: string): string
   end
 
   local prefix = mode_cfg[role]
+
+  --+ Visual/select modes typically share the same activation prefixes as normal mode.
+  --+ This avoids needing to duplicate role→prefix tables across modes.
+  if not prefix and (mode == "v" or mode == "x" or mode == "s") then
+    local n_cfg = t.roles.ActivationPrefix["n"]
+    if n_cfg then
+      prefix = n_cfg[role]
+    end
+  end
+
   if not prefix then
     error(("safemap: unknown role '%s' for mode '%s'"):format(role.name, mode))
   end

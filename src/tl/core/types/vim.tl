@@ -14,7 +14,7 @@ local record Vim
   loop: VimLoop
   opt: VimOpt
   o: VimOptGlobal
-  wo: VimWo
+  wo: {VimWo}
   g: VimGlobal
   opt_local: VimOptLocal
   b: {integer: RakhshStateBuffer}
@@ -84,6 +84,7 @@ local record VimFn
   bufname: function(bufnr: integer): string
   len: function({any}): integer
   getenv: function(varname: string): string | nil
+  strdisplaywidth: function(str: string): integer
 end
 
 local type VimCursorPosition = { integer, integer }
@@ -132,6 +133,7 @@ local record VimApi
   nvim_feedkeys: function(keys: string, mode: string, escape_ks: boolean): nil
   nvim_get_current_tabpage: function(): integer
   nvim_set_current_tabpage: function(tabpage: integer): nil
+  nvim_buf_delete: function(bufnr: integer, opts: {string:any}): nil
 end
 
 local record VimBo
@@ -281,6 +283,7 @@ local record VimAutocmdOpts
   command: string | nil
   group: integer | nil
   pattern: string | {string} | nil
+  nested: boolean | nil
 end
 
 local record VimUserCommandOpts

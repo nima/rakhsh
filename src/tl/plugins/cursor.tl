@@ -1,13 +1,20 @@
 local t = require("core.types")
-local keymaps = require("core.keymaps")
 local R = t.roles.Roles
 local T = t.tags.Tags
+
 global vim: t.vim.Vim
 
--- Simple cursor-word highlight toggle; no cursor-position persistence.
+local OnEvents = t.plugins.KeymapEvents
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
 
+--------------------------------------------------------------------------------
+
+-- Simple cursor-word highlight toggle; no cursor-position persistence.
 local cursorword_enabled: boolean = true
 local cursorword_match_id: integer | nil = nil
+
+--------------------------------------------------------------------------------
 
 local function clear_cursorword(): nil
   if cursorword_match_id ~= nil then
@@ -51,7 +58,27 @@ local function toggle_cursorword(): nil
   end
 end
 
+--------------------------------------------------------------------------------
+
 local M: t.plugins.PluginModule = {}
+
+function M.keymaps(): {PluginKeymap}
+  return {
+    {
+      mode = "n",
+      role = R.Toggle,
+      key = "h",
+      rhs = toggle_cursorword,
+      desc = "Toggle word highlight under cursor",
+      tags = { T.ActionToggle },
+      on = OnEvents.Immediate,
+    },
+  }
+end
+
+function M.lazy(): {PluginSpec}
+  return {}
+end
 
 function M.init(): nil
   define_cursorword_hl()
@@ -68,8 +95,6 @@ function M.init(): nil
   vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
     callback = function(): nil update_cursorword() end,
   })
-
-  keymaps.safemap("n", R.Toggle, "h", toggle_cursorword, keymaps.opts("Toggle word highlight under cursor", { T.ActionToggle }))
 end
 
 return M

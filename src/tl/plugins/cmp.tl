@@ -1,5 +1,8 @@
 local t = require("core.types")
 
+local type PluginSpec = t.plugins.PluginSpec
+local type PluginKeymap = t.plugins.PluginKeymap
+
 local record CmpConfirmOpts
   select: boolean
 end
@@ -32,11 +35,14 @@ end
 
 local M: t.plugins.PluginModule = {}
 
-function M.lazy():  t.plugins.PluginSpec
-  return {
+function M.keymaps(): {PluginKeymap}
+  return {}
+end
+
+function M.lazy(): {PluginSpec}
+  local cmp_spec = ({
     "hrsh7th/nvim-cmp",
     lazy = false,
-    keymaps = {},
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-buffer",
@@ -57,7 +63,9 @@ function M.lazy():  t.plugins.PluginSpec
         },
       })
     end,
-  } as t.plugins.PluginSpec
+  } as PluginSpec)
+
+  return { cmp_spec }
 end
 
 return M
