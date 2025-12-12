@@ -5,7 +5,7 @@ local hotkeys = require("core.hotkeys")
 hotkeys.init()
 
 require("core.plugins").init({
---"plugins.mini",           -- Mini.nvim
+  "plugins.mini",           -- Mini.nvim
   "plugins.finder",         -- Telescope, fzf, etc.
   "plugins.cursor",         -- Cursor highlight
   "plugins.lsp",            -- LSP
