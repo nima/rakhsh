@@ -1,5 +1,5 @@
-local roles = require("core.types.roles")
-local tags  = require("core.types.tags")
+local roles = require("types.roles")
+local tags  = require("types.tags")
 
 local type Role = roles.Role
 local type Tag  = tags.Tag

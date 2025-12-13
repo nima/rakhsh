@@ -22,5 +22,6 @@ require("core.plugins").init({
   "plugins.observer",       -- Observer
   "plugins.dialogues",      -- Pop-up dialogues
   "plugins.terminal",       -- Terminal integration
-  "plugins.affordance",     -- Colorschemes, special comments, syntax highlighting
+  "plugins.affordance",     -- Affordance (themes, colors, icons)
+  "plugins.splash",         -- Splash screen
 })

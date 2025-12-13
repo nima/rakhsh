@@ -1,4 +1,4 @@
-local _tags = require("core.types.tags")
+local _tags = require("types.tags")
 local T = _tags.Tag
 local Ts = _tags.Tags
 

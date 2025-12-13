@@ -1,4 +1,4 @@
-local t = require("core.types")
+local t = require("types")
 
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap

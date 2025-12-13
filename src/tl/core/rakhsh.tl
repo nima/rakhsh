@@ -1,5 +1,5 @@
 --= Top-Level Runtime Orchestrator
-local t = require("core.types")
+local t = require("types")
 global vim: t.vim.Vim
 
 local explicit_jump: {string:boolean} = {}

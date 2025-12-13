@@ -1,7 +1,9 @@
-local t = require("core.types")
+local t = require("types")
 
 global vim: t.vim.Vim
 
+--------------------------------------------------------------------------------
+--= Private Interface -={
 local function get_ui_size(): (integer, integer)
   --+ In remote-ui flows, window sizing can be wrong until a UI attaches.
   --+ vim.o.columns/lines reflect the attached UI grid size.
@@ -65,13 +67,20 @@ local function setup_splash_exit_on_insert(buf: integer): nil
       if not vim.api.nvim_buf_is_valid(buf) then return end
 
       -- turn this into a normal empty buffer and let the user start typing
-      vim.bo[buf].buftype   = ""
-      vim.bo[buf].bufhidden = ""
-      vim.bo[buf].swapfile  = true
-      vim.bo[buf].filetype  = ""
-      vim.bo[buf].readonly   = false
-      vim.bo[buf].modifiable = true
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "" })
+            -- Disarm ASAP so CursorMoved handler stops fighting.
+      vim.b[buf].rakhsh_splash_armed = false
+
+      -- Make sure we're operating in the window that actually shows the splash.
+      local winid = vim.fn.bufwinid(buf)
+      if winid ~= -1 then
+        vim.api.nvim_set_current_win(winid)
+      end
+
+      -- Replace splash with a fresh empty buffer, then wipe the splash buffer.
+      vim.cmd("enew")
+      if vim.api.nvim_buf_is_valid(buf) then
+        pcall(vim.api.nvim_buf_delete, buf, { force = true })
+      end
     end,
   })
   -- Keep the splash "static": allow user to press `q` or `i`, but don't let cursor roam.
@@ -179,13 +188,19 @@ local function show_rakhsh_splash(): nil
     end
   end)
 end
-
+-- }=-
 --------------------------------------------------------------------------------
+--= Public Interface -={
 
-local M = {}
+local M: t.plugins.PluginModule = {}
 
-function M.setup(): nil
-  -- Only ever consider splash when no files were passed on the CLI.
+local type PluginKeymap = t.plugins.PluginKeymap
+function M.keymaps(): {PluginKeymap}
+  return {}
+end
+
+function M.init(): nil
+  --+ Only ever consider splash when no files were passed on the CLI.
   if vim.fn.argc() ~= 0 then return end
 
   local function show(): nil
@@ -194,20 +209,24 @@ function M.setup(): nil
     end)
   end
 
-  -- If this module is loaded after the UI already attached (lazy-loading), UIEnter already fired.
-  -- In that case, show immediately.
+  --+ If this module is loaded after the UI already attached (lazy-loading),
+  --+ UIEnter already fired.  In that case, show immediately.
   if #vim.api.nvim_list_uis() > 0 then
     show()
     return
   end
 
-  -- Otherwise wait for a UI to attach so the final grid size is known for centering.
+  --+ Otherwise wait for a UI to attach so the final grid size is known for centering.
   vim.api.nvim_create_autocmd("UIEnter", {
     once = true,
-    callback = function()
-      show()
-    end,
+    callback = function() show() end,
   })
 end
+
+local type PluginSpec = t.plugins.PluginSpec
+function M.lazy(): {PluginSpec}
+  return {}
+end
+-- }=-
 
 return M

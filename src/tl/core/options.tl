@@ -1,4 +1,4 @@
-local t = require("core.types")
+local t = require("types")
 local cfg = require("core.config")
 
 global vim: t.vim.Vim

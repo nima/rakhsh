@@ -203,6 +203,7 @@ build: pre-validate
 	@mkdir -p build
 	@mkdir -p $(RAKHSH_CACHE)
 	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
+	@cd rx-louder && cyan build --prune > $(RAKHSH_CACHE)/cyan-louder.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan-louder.log && exit 1; }
 	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ build/lua/
 .PHONY: build
 
@@ -225,8 +226,8 @@ splash:
 
 $(RAKHSH_LAZY):
 	@bin/rx
-	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to `Rakhsh`"
 install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
+	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to \`Rakhsh\`"
 	@echo -e "[$(call green,$@)] Install complete"
 .PHONY: install
 
@@ -236,7 +237,7 @@ $(RAKHSH_CONFIG): build
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
-
+.PHONY: $(RAKHSH_CONFIG)
 sync: $(RAKHSH_CONFIG) link splash
 	@echo -e "[$(call green,$@)]"
 .PHONY: sync
@@ -270,6 +271,7 @@ purge: uninstall
 clean:
 	@echo -e "[$(call yellow,$@)]"
 	rm -rf build
+	rm -rf rx-louder/lua
 .PHONY: clean
 
 ################################################################################
@@ -283,7 +285,10 @@ artifacts:
 
 ls-files:
 	@echo -e "[$(call magenta,$@:Teal)]"
+	# Rakhsh IDE
 	@lsd --tree src/tl
+	# Local Plugins
+	@lsd --tree rx-*
 .PHONY: ls-files.user
 
 ls-files.user:
