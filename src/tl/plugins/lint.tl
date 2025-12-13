@@ -1,6 +1,6 @@
 -- Editor-side linting helpers: trailing whitespace, etc.
 local c = require("core.config")
-local t = require("core.types")
+local t = require("types")
 local T = t.tags.Tags
 local R = t.roles.Roles
 global vim: t.vim.Vim

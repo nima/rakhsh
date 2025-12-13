@@ -87,6 +87,7 @@ local record VimFn
   getenv: function(varname: string): string | nil
   strdisplaywidth: function(str: string): integer
   foldclosed: function(string): integer
+  bufwinid: function(bufnr: integer): integer
 end
 
 local type VimCursorPosition = { integer, integer }
@@ -137,6 +138,8 @@ local record VimApi
   nvim_set_current_tabpage: function(tabpage: integer): nil
   nvim_buf_delete: function(bufnr: integer, opts: {string:any}): nil
   nvim_del_autocmd: function(autocmd_id: integer): nil
+  nvim_set_current_buf: function(bufnr: integer): nil
+  nvim_set_current_win: function(win: integer): nil
 end
 
 local record VimBo

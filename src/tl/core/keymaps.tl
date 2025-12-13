@@ -1,4 +1,4 @@
-local t = require("core.types")
+local t = require("types")
 local hotkeys = require("core.hotkeys")
 
 --= Types -={ 

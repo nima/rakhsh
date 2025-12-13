@@ -1,4 +1,4 @@
-local t = require("core.types")
+local t = require("types")
 
 local R = t.roles.Roles
 local T = t.tags.Tags

@@ -1,4 +1,4 @@
-local t = require("core.types")
+local t = require("types")
 local plugins = require("core.plugins")
 local keymaps = require("core.keymaps")
 local R = t.roles.Roles
