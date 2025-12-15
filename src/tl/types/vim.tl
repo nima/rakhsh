@@ -98,6 +98,7 @@ local record VimFn
   bufwinid: function(bufnr: integer): integer
   globpath: function(path: string, expr: string, all: boolean | nil, nosuf: boolean | nil): string
   getloclist: function(win: integer, what: VimGetLocListOpts | nil): VimLocListInfo
+  exepath: function(path: string): string
 end
 
 local type VimCursorPosition = { integer, integer }

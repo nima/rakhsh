@@ -50,6 +50,13 @@ local record CmpNvimLsp
   default_capabilities: function(any): any
 end
 
+local function get_python_executable_path(): string
+  local conda_prefix = os.getenv("CONDA_PREFIX")
+  if conda_prefix then return conda_prefix .. "/bin/python" end
+
+  return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+end
+
 function M.lazy(): {PluginSpec}
   local lsp_spec = ({
     "neovim/nvim-lspconfig",
@@ -69,7 +76,7 @@ function M.lazy(): {PluginSpec}
       local clangCfg = { "clangd", "--compile-commands-dir=build" }
       lsp.config("bashls", { capabilities = capabilities })
       lsp.config("clangd", { capabilities = capabilities, cmd = clangCfg })
-      lsp.config("pyright", { capabilities = capabilities })
+      lsp.config("pyright", { capabilities = capabilities, settings = { python = { pythonPath = get_python_executable_path() }}})
       lsp.config("gopls",   { capabilities = capabilities })
       lsp.config("lua_ls", { capabilities = capabilities, settings = luaCfg })
       lsp.enable({ "bashls", "clangd", "pyright", "gopls", "lua_ls" })
