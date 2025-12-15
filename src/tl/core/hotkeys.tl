@@ -4,7 +4,7 @@ local T = t.tags.Tags
 
 global vim: t.vim.Vim
 
--- One entry per safemap-registered keymap
+--+ One entry per safemap-registered keymap
 local record RakhshKeymap
   mode: string
   role: t.roles.Role
@@ -13,9 +13,12 @@ local record RakhshKeymap
   rhs: string
   desc: string
   tags: { t.tags.Tag }
-  group: string | nil  -- optional logical grouping
+  group: string | nil  --+ logical grouping
 end
 local registry: {RakhshKeymap} = {}
+
+local type RegistryMap = { string: boolean }
+local registry_map: RegistryMap = {}
 
 local function lhs_for(mode: string, role: t.roles.Role, key: string): string
   local mode_cfg = t.roles.ActivationPrefix[mode]
@@ -53,6 +56,16 @@ local function lhs_for(mode: string, role: t.roles.Role, key: string): string
   return prefix .. key
 end
 
+local function registry_key(m: RakhshKeymap): string
+  return table.concat({
+    m.mode or "",
+    m.role and tostring(m.role) or "",
+    m.key or "",
+    m.group or "",
+    m.internal and "1" or "0",
+  }, "\0")
+end
+
 local function format_tags(tags: { t.tags.Tag }): string
   if tags == nil or #tags == 0 then
     return ""
@@ -88,7 +101,10 @@ local keymaps = {
   { mode = "n", role = R.Naked, key = "<C-c>", internal = true, rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
 }
 
+--------------------------------------------------------------------------------
+
 local record RakhshHotkeysCore
+  RakhshKeymap: RakhshKeymap
   init: function(): nil
   register: function(RakhshKeymap): nil
   registry: function(): {RakhshKeymap}
@@ -112,11 +128,27 @@ function M.apply_initial_keymaps(): nil
   end
 end
 
+local hl_inited = false
+local function ensure_hl(): nil
+  if hl_inited then
+    return
+  end
+  hl_inited = true
+  -- Highlight groups for the RakhshKeys columns
+  vim.api.nvim_set_hl(0, "RakhshKeyMode", { link = "Type" })
+  vim.api.nvim_set_hl(0, "RakhshKeyKeySafe", { bold = true, link = "ErrorMsg" })
+  vim.api.nvim_set_hl(0, "RakhshKeyKeyDoc",  { italic = true, link = "Comment" })
+  vim.api.nvim_set_hl(0, "RakhshKeyDesc", { link = "String" })
+  vim.api.nvim_set_hl(0, "RakhshKeyTags", { link = "Keyword" })
+end
+
 function M.show_help(): nil
   if #registry == 0 then
     vim.notify("No Rakhsh keymaps registered yet", vim.log.levels.INFO)
     return
   end
+
+  ensure_hl()
 
   local _pickers = "telescope.pickers"
   local pickers = require(_pickers) as t.telescope.Pickers
@@ -140,13 +172,6 @@ function M.show_help(): nil
       { remaining = true }, -- tags
     },
   })
-
-  -- Highlight groups for the RakhshKeys columns
-  vim.api.nvim_set_hl(0, "RakhshKeyMode", { link = "Type" })
-  vim.api.nvim_set_hl(0, "RakhshKeyKeySafe", { bold = true, link = "ErrorMsg" })
-  vim.api.nvim_set_hl(0, "RakhshKeyKeyDoc",  { italic = true, link = "Comment" })
-  vim.api.nvim_set_hl(0, "RakhshKeyDesc", { link = "String" })
-  vim.api.nvim_set_hl(0, "RakhshKeyTags", { link = "Keyword" })
 
   local function make_display(entry: TelescopeEntry): string
     local m = entry.value
@@ -205,6 +230,11 @@ function M.show_help(): nil
 end
 
 function M.register(map: RakhshKeymap): nil
+  local key = registry_key(map)
+  if registry_map[key] then
+    return
+  end
+  registry_map[key] = true
   table.insert(registry, map)
 end
 

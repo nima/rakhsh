@@ -9,7 +9,12 @@ global vim: t.vim.Vim
 
 --= 1. Disable legacy built-in plugins
 vim.g.loaded_matchit = 1
-vim.opt.shortmess:append("I")
+do
+  local sm = vim.o.shortmess
+  if not string.find(sm, "I", 1, true) then
+    vim.o.shortmess = sm .. "I"
+  end
+end
 vim.opt.swapfile = false
 
 --= 2. Pure Core State

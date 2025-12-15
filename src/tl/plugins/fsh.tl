@@ -21,7 +21,7 @@ function M.keymaps(): {PluginKeymap}
       mode = "n",
       role = R.Toggle,
       key = "t",
-      rhs = function() vim.cmd("NvimTreeToggle") end,
+      rhs = function() vim.api.nvim_command("NvimTreeToggle") end,
       desc = "File tree toggle",
       tags = { T.ActionView, T.TargetDialogue },
       on = OnEvents.Immediate,

@@ -48,12 +48,12 @@ function M.lazy(): {PluginSpec}
     "tanvirtin/monokai.nvim",
     priority = 1000,
     lazy = false,
-    event = { "VimEnter" },
+    event = "VeryLazy",
     config = function()
       local theme = cfg.colorschema
-      local ok, _ = pcall(vim.cmd, "colorscheme " .. theme)
-      if ok then return end
-      vim.notify("colorscheme: '" .. theme .. "' not found (install theme plugin and restart)", vim.log.levels.ERROR, nil)
+      if theme == nil or theme == "" then return end
+      pcall(vim.api.nvim_set_option_value, "colorscheme", theme, {})
+      pcall(vim.api.nvim_command, "colorscheme " .. theme)
     end,
   } as PluginSpec)
 

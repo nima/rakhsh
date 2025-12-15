@@ -46,9 +46,9 @@ function M.init(): nil
       local buf = ev.buf as integer
       vim.bo[buf].bufhidden = "hide"
       vim.bo[buf].modifiable = false
-      vim.cmd("setlocal nospell")
-      vim.cmd("setlocal nobuflisted")
-      vim.cmd("setlocal nonumber norelativenumber")
+      vim.cmd.setlocal("nospell")
+      vim.cmd.setlocal("nobuflisted")
+      vim.cmd.setlocal("nonumber norelativenumber")
 
       vim.api.nvim_create_autocmd("TermClose", {
         group = aug,
