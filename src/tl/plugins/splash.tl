@@ -77,7 +77,7 @@ local function setup_splash_exit_on_insert(buf: integer): nil
       end
 
       -- Replace splash with a fresh empty buffer, then wipe the splash buffer.
-      vim.cmd("enew")
+      vim.cmd.enew()
       if vim.api.nvim_buf_is_valid(buf) then
         pcall(vim.api.nvim_buf_delete, buf, { force = true })
       end

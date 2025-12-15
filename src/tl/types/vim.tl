@@ -53,6 +53,14 @@ local record VimExec2Result
   output: string
 end
 
+local record VimGetLocListOpts
+  winid: integer | nil
+end
+
+local record VimLocListInfo
+  winid: integer | nil
+end
+
 local record VimFn
   argc: function(): integer
   maparg: function(lhs: string, mode: string, abbr: boolean, dict: boolean): any
@@ -88,6 +96,8 @@ local record VimFn
   strdisplaywidth: function(str: string): integer
   foldclosed: function(string): integer
   bufwinid: function(bufnr: integer): integer
+  globpath: function(path: string, expr: string, all: boolean | nil, nosuf: boolean | nil): string
+  getloclist: function(win: integer, what: VimGetLocListOpts | nil): VimLocListInfo
 end
 
 local type VimCursorPosition = { integer, integer }
@@ -140,6 +150,7 @@ local record VimApi
   nvim_del_autocmd: function(autocmd_id: integer): nil
   nvim_set_current_buf: function(bufnr: integer): nil
   nvim_set_current_win: function(win: integer): nil
+  nvim_command: function(cmd: string): nil
 end
 
 local record VimBo
@@ -196,6 +207,8 @@ end
 local record VimOptionList
   append: function(self: VimOptionList, value: string): nil
   remove: function(self: VimOptionList, value: string): nil
+  prepend: function(self: VimOptionList, value: string): nil
+  get: function(self: VimOptionList): {string}
 end
 
 local record VimOptLocal
@@ -272,7 +285,7 @@ local record VimLoop
 end
 
 local record VimOptRuntimeRtp
-  prepend: function(self: any, path: string): nil
+  prepend: function(self: VimOptRuntimeRtp, path: string): nil
 end
 
 local record VimViewOptions
@@ -310,7 +323,16 @@ end
 
 local type VimUserCommandCallback = function(opts: VimUserCommandOpts)
 
-local type VimCmd = function(string): nil
+local record VimCmd
+  edit: function(file: string)
+  colorscheme: function(scheme: string)
+  tabnew: function()
+  tabclose: function()
+  setlocal: function(setting: string)
+  enew: function()
+  lopen: function()
+  lclose: function()
+end
 
 local record VimLSPProtocol
   make_client_capabilities: function(): any
@@ -357,6 +379,7 @@ local record VimDiagnostic
   goto_prev: function(opts: any | nil): nil
   goto_next: function(opts: any | nil): nil
   setloclist: function(): nil
+  config: function(opts: any): nil
 end
 
 local record NvimUI

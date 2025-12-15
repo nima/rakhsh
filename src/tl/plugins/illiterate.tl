@@ -19,12 +19,15 @@ local function install_here()
   if not ok or lang == nil or lang == "" then return end
 
   -- Invoke the user-facing TSInstall command for this language
-  local ok_cmd, err = pcall(vim.cmd, "TSInstall " .. lang)
-  if not ok_cmd then
+  ok = pcall(vim.api.nvim_command, "TSInstall " .. lang)
+  --[[
+  if not ok then
     vim.notify("[TreeSitter] `:TSInstall " .. lang .. "` FAILED: " .. tostring(err), vim.log.levels.ERROR, nil)
   else
     vim.notify("[Treesitter] `:TSInstall " .. lang .. "` COMPLETE", vim.log.levels.INFO, nil)
   end
+  ]]
+  --! TODO fix error missing from ^^
 end
 
 local record TreeSitterConfigsModule
@@ -61,7 +64,7 @@ function M.lazy(): {PluginSpec}
     "nvim-treesitter/nvim-treesitter",
     lazy = false,
     config = function(): nil
-      local _cfg = "nvim-treesitter.configs"
+      local _cfg = "nvim-treesitter.config"
       local cfg = (require(_cfg) as TreeSitterConfigsModule)
       cfg.setup({
         highlight = { enable = true },

@@ -39,6 +39,9 @@ local function setup_lazy(missing_install: boolean): boolean
   lazy.setup(plugins, {
     install = { missing = missing_install },
     checker = { enabled = false },
+    git = {
+      filter = false, -- disable blob:none; required for nvim-treesitter Lua runtime
+    },
   })
 
   return true
@@ -54,7 +57,7 @@ local function RakhshLazyInstall(): nil
     pattern = { "LazyInstall", "LazySync", "LazyDone" },
     callback = function(_ev)
       vim.schedule(function()
-        vim.cmd("qa")
+        vim.api.nvim_command("qa")
       end)
     end,
   })

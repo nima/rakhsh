@@ -1,4 +1,5 @@
 local t = require("types")
+local keymaps = require("core.keymaps")
 
 global vim: t.vim.Vim
 
@@ -58,6 +59,7 @@ function M.lazy(): {PluginSpec}
 
       pcall(function() telescope.load_extension("file_browser") end)
       pcall(function() telescope.load_extension("fzf") end)
+
     end,
   } as PluginSpec)
 
@@ -66,9 +68,19 @@ function M.lazy(): {PluginSpec}
     build = "make",
   } as PluginSpec)
 
+  local ctrlp_spec = ({
+    "ctrlpvim/ctrlp.vim",
+    name = "ctrlp",
+    lazy = false,
+    config = function()
+      keymaps.docmap("n", "<C-P>",  keymaps.opts("[CtrlP]", { T.ActionNavigate, T.TargetBuffer }))
+    end,
+  } as PluginSpec)
+
   return {
     telescope_spec,
     fzf_native_spec,
+    ctrlp_spec,
   }
 end
 

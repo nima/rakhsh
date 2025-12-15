@@ -7,21 +7,9 @@ local record RakhshMapOpts
   tags: {t.tags.Tag}
 end
 
--- Local view of the hotkeys registry item (kept in sync with core.hotkeys).
-local record RakhshKeymap
-  mode: string
-  role: t.roles.Role
-  key: string
-  internal: boolean
-  rhs: string
-  desc: string
-  tags: {t.tags.Tag}
-  group: string | nil
-end
-
 -- Minimal Telescope entry type used by our picker.
 local record TelescopeEntry
-  value: RakhshKeymap
+  value: hotkeys.RakhshKeymap
   display: string
   ordinal: string
 end
@@ -63,11 +51,30 @@ local record KeymapModule
 
   opts: function(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
 
-  make_entry: function(keymap: RakhshKeymap): TelescopeEntry
+  make_entry: function(keymap: hotkeys.RakhshKeymap): TelescopeEntry
 end
 -- }=-
 
 --= Private Interface -={
+-- Hotkey registry dedupe (idempotent registration).
+-- Keyed by (mode, role.name, tail/key, internal, group, bufnr?).
+local _seen_hotkeys: {string : boolean} = {}
+
+local function _hotkey_seen_key(item: hotkeys.RakhshKeymap, bufnr?: integer): string
+  local b = bufnr and tostring(bufnr) or ""
+  local g = item.group or ""
+  local r = (item.role and item.role.name) or "?"
+  local i = item.internal and "1" or "0"
+  return table.concat({ item.mode, r, item.key, i, g, b }, "\0")
+end
+
+local function register_hotkey_once(item: hotkeys.RakhshKeymap, bufnr?: integer): nil
+  local k = _hotkey_seen_key(item, bufnr)
+  if _seen_hotkeys[k] then return end
+  _seen_hotkeys[k] = true
+  hotkeys.register(item)
+end
+
 local function ensure_role(mode: string, role: t.roles.Role, key: string): nil
   if type(role) ~= "table" or role.name == nil then
     local caller = debug.getinfo(4, "Sl")
@@ -255,7 +262,7 @@ function M.safemap(
     rhs_str = "<lua>"
   end
 
-  hotkeys.register({
+  register_hotkey_once({
     mode = mode,
     role = role,
     key = key,
@@ -264,7 +271,7 @@ function M.safemap(
     desc = vim_opts.desc or "",
     tags = t.roles.complete(role, opts.tags, false),
     group = nil,
-  })
+  } as hotkeys.RakhshKeymap)
 end
 
 function M.docmap(
@@ -296,7 +303,7 @@ function M.docmap(
     existing_desc = e.desc or ""
   end
 
-  hotkeys.register({
+  register_hotkey_once({
     mode = mode,
     role = role,
     key = tail,
@@ -305,7 +312,7 @@ function M.docmap(
     desc = (opts.vim_opts.desc or existing_desc),
     tags = t.roles.complete(role, opts.tags, false),
     group = nil,
-  })
+  } as hotkeys.RakhshKeymap)
 end
 
 function M.safemap_buf(
@@ -332,7 +339,7 @@ function M.safemap_buf(
     rhs_str = "<lua>"
   end
 
-  hotkeys.register({
+  register_hotkey_once({
     mode = mode,
     role = role,
     key = key,
@@ -341,7 +348,7 @@ function M.safemap_buf(
     desc = (merged as t.vim.VimMapOpts).desc,
     tags = t.roles.complete(role, opts.tags, false),
     group = nil,
-  })
+  } as hotkeys.RakhshKeymap, bufnr)
 end
 
 function M.docmap_buf(
@@ -369,7 +376,7 @@ function M.docmap_buf(
     existing_desc = e.desc or ""
   end
 
-  hotkeys.register({
+  register_hotkey_once({
     mode = mode,
     role = role,
     key = tail,
@@ -378,7 +385,7 @@ function M.docmap_buf(
     desc = (opts.vim_opts.desc or existing_desc),
     tags = t.roles.complete(role, opts.tags, false),
     group = nil,
-  })
+  } as hotkeys.RakhshKeymap, bufnr)
 end
 
 function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
@@ -401,7 +408,7 @@ function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
 end
 
 
-function M.make_entry(keymap: RakhshKeymap): TelescopeEntry
+function M.make_entry(keymap: hotkeys.RakhshKeymap): TelescopeEntry
   -- `keymap.key` is the role-local tail; reconstruct the real lhs for display/search.
   local lhs = mklhs(keymap.mode, keymap.role, keymap.key)
 

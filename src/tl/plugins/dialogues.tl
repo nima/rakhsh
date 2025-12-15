@@ -117,16 +117,16 @@ function M.open_popup_with_cmd_sandboxed(cmd: string): nil
   local orig_tab = api.nvim_get_current_tabpage()
 
   -- open temp tab (new empty buffer becomes current)
-  vim.cmd("tabnew")
+  vim.cmd.tabnew()
 
   -- try running the command; it may change windows/buffers inside this tab
-  local _ok = pcall(vim.cmd, cmd)
+  local _ok = pcall(vim.api.nvim_command, cmd)
 
   -- capture the buffer that the command left us in this tab
   local buf = api.nvim_get_current_buf()
 
   -- close the temp tab, return to original
-  vim.cmd("tabclose")
+  vim.cmd.tabclose()
   api.nvim_set_current_tabpage(orig_tab)
 
   -- open a popup on the same buffer to preserve highlights/colors

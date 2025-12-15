@@ -43,7 +43,7 @@ vim.api.nvim_create_autocmd("BufReadPost", {
     local line = vim.fn.line("'\"")
     local last = vim.fn.line("$")
     if line > 0 and line <= last then
-      pcall(vim.cmd, "normal! g`\"")
+      pcall(vim.api.nvim_command, "normal! g`\"")
     end
   end,
 })
@@ -92,7 +92,7 @@ vim.api.nvim_create_user_command(
     if p.l > 0 then
       explicit_jump[p.f] = true
     end
-    vim.cmd("edit " .. vim.fn.fnameescape(p.f))
+    vim.cmd.edit(vim.fn.fnameescape(p.f))
     --+ BufReadPost runs to completion here
     if p.l == 0 then return end
     set_cursor_position(p)
