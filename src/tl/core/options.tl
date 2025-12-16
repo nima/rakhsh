@@ -27,13 +27,13 @@ vim.opt.updatetime = 500
 vim.opt.termguicolors = true
 vim.opt.numberwidth = 3
 vim.opt.signcolumn = "yes:2"
-vim.opt.clipboard = "unnamedplus"
+--vim.opt.clipboard = "unnamedplus"
 vim.opt.mouse = "a"
 vim.opt.more = false
 vim.opt.wrap = false
 vim.opt.scrolloff = cfg.scrolloff
 vim.opt.number = true
-vim.opt.relativenumber = true
+vim.opt.relativenumber = false
 
 vim.g.mapleader = " "
 
@@ -76,8 +76,8 @@ api.nvim_create_autocmd("BufWinEnter", {
   callback = function(): nil
     if vim.bo[0].buftype ~= "" then return end 
     if vim.bo[0].filetype == "rakhsh-splash" then return end
-    vim.wo[0].number = true
-    vim.wo[0].relativenumber = true
+    vim.wo[0].number = vim.opt.number
+    vim.wo[0].relativenumber = vim.opt.relativenumber
     vim.wo[0].fillchars = "eob:~"
     vim.api.nvim_set_hl(0, "EndOfBuffer", { link = "NonText" })
     vim.opt_local.foldmethod = "expr"
