@@ -10,7 +10,7 @@ local type PluginKeymap = t.plugins.PluginKeymap
 
 --------------------------------------------------------------------------------
 
--- Simple cursor-word highlight toggle; no cursor-position persistence.
+--+ Simple cursor-word highlight toggle; no cursor-position persistence.
 local cursorword_enabled: boolean = true
 local cursorword_match_id: integer | nil = nil
 
@@ -24,10 +24,25 @@ local function clear_cursorword(): nil
 end
 
 local function define_cursorword_hl(): nil
+  -- Cursor word (yellow)
   vim.api.nvim_set_hl(0, "RakhshCursorWord", {
     fg = "#ffcc00",
     underline = true,
     bold = true,
+  })
+
+  vim.api.nvim_set_hl(0, "IncSearch", {
+    fg = "#2fdcff",
+    underline = true,
+    bold = true,
+    nocombine = true,
+  })
+
+  vim.api.nvim_set_hl(0, "Search", {
+    fg = "#ff3366",
+    underline = true,
+    bold = true,
+    nocombine = true,
   })
 end
 
@@ -39,9 +54,12 @@ local function update_cursorword(): nil
 
   local ok, word = pcall(vim.fn.expand, "<cword>")
   if not ok or word == nil or word == "" then
-    -- no word under cursor → keep existing highlight instead of killing it
+    --+ no word under cursor → keep existing highlight instead of killing it
     return
   end
+
+  --+ Some colorschemes/plugins clear unknown highlight groups; re-assert ours.
+  define_cursorword_hl()
 
   clear_cursorword()
 
@@ -81,14 +99,27 @@ function M.lazy(): {PluginSpec}
 end
 
 function M.init(): nil
-  define_cursorword_hl()
+  local aug = vim.api.nvim_create_augroup("rakhsh_cursorword", { clear = true })
 
-  -- Re-apply cursor-word highlight after any colorscheme or theme change
-  vim.api.nvim_create_autocmd("ColorScheme", {
-    callback = function(): nil
+  local function apply(): nil
+    -- Colorscheme/UI churn clears highlight groups; run after tick to win.
+    vim.schedule(function()
       define_cursorword_hl()
       update_cursorword()
-    end,
+    end)
+  end
+
+  -- Re-apply after any colorscheme change
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = aug,
+    callback = apply,
+  })
+
+  -- Ensure we also win once UI is ready
+  vim.api.nvim_create_autocmd("UIEnter", {
+    group = aug,
+    once = true,
+    callback = apply,
   })
 
   -- Cursor-word autocmds

@@ -17,6 +17,7 @@ local record RoleSet
     Window:  Role
     Toggle:  Role
     Info:    Role
+    Edit:    Role
     AI:      Role
     SCM:     Role
     LSP:     Role
@@ -35,6 +36,7 @@ local Roles: RoleSet = {
     Window  = { name = "WindowManagement", tag = "r/native/w", desc = "TUI Window management" },
     Toggle  = { name = "Toggle", tag = "r/toggle", desc = "It goes on... it goes off" },
     Info    = { name = "Information", tag = "r/info", desc = "Strictly non-mutating commands" },
+    Edit    = { name = "Editor", tag = "r/edit", desc = "Mutating editorial commands" },
     AI      = { name = "ArtificialIntelligence", tag = "r/ai", desc = "Anything involving AI or LLM API calls" },
     SCM     = { name = "SourceControlManagement", tag = "r/git", desc = "Anything related to Git" },
     LSP     = { name = "LanguageServerProtocol", tag = "r/lsp", desc = "All LSP-related hotkeys" },
@@ -54,6 +56,7 @@ local ActivationPrefix: {string: {Role: string}} = {
         [Roles.Window]  = "<C-w>",
         [Roles.Toggle]  = "<Esc>",
         [Roles.Info]    = "<F2>",
+        [Roles.Edit]    = "<A-*>",
         [Roles.AI]      = "<F5>",
         [Roles.SCM]     = "<F10>",
         [Roles.LSPInfo] = "<F12>",

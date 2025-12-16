@@ -1,4 +1,9 @@
 local t = require("types")
+--[[
+local R = t.roles.Roles
+local T = t.tags.Tags
+local OnEvents = t.plugins.KeymapEvents
+]]
 
 global vim: t.vim.Vim
 
@@ -21,6 +26,10 @@ local record MiniComment
   setup: function({ string: any } | nil): nil
 end
 
+local record MiniMove
+  setup: function({ string: any } | nil): nil
+end
+
 local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
@@ -33,14 +42,11 @@ function M.lazy(): {PluginSpec}
     lazy = false,
     config = function()
       local _mod: string
-      _mod = "mini.pairs"
-      (require(_mod) as MiniPairs).setup(nil)
-      _mod = "mini.surround"
-      (require(_mod) as MiniSurround).setup(nil)
-      _mod = "mini.ai"
-      (require(_mod) as MiniAI).setup(nil)
-      _mod = "mini.comment"
-      (require(_mod) as MiniComment).setup(nil)
+      _mod = "mini.pairs"; (require(_mod) as MiniPairs).setup(nil)
+      _mod = "mini.surround"; (require(_mod) as MiniSurround).setup(nil)
+      _mod = "mini.ai"; (require(_mod) as MiniAI).setup(nil)
+      _mod = "mini.comment"; (require(_mod) as MiniComment).setup(nil)
+      _mod = "mini.move"; (require(_mod) as MiniMove).setup(nil)
     end,
   } as PluginSpec)
 

@@ -418,6 +418,7 @@ local record VimGlobal
   string: any
   pos: VimCursorPositions
   loaded_matchit: integer | nil
+  colors_name: string | nil
 end
 
 local record VimLogLevels

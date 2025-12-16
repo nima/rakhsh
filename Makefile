@@ -224,6 +224,10 @@ splash:
 	@cat src/data/support.txt >> $(RAKHSH_SPLASH)
 .PHONY: splash
 
+iTerm2.profile:
+	@jq . "$(ITERM2_DYN_PROF)"
+.PHONY: iTerm2.profile
+
 $(RAKHSH_LAZY):
 	@bin/rx
 install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
