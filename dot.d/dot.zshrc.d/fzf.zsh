@@ -64,6 +64,8 @@ fi
 
 export FZF_DEFAULT_COMMAND='fd --hidden --strip-cwd-prefix --follow --exclude=.git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_CTRL_T_OPTS="--preview 'bat -n --color=always --line-range :500 {}'"
 export FZF_ALT_C_COMMAND="$FZF_DEFAULT_COMMAND --type=d"
+export FZF_ALT_C_OPTS="--preview 'lsd --tree --color=always {} | head -n200'"
 _fzf_compgen_path() { fd --hidden --exclude=.git . "$1"; }
 _fzf_compgen_dir() { fd --type=d --hidden --exclude=.git . "$1"; }

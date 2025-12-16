@@ -1,1 +1,0 @@
-alias less=bat -s
