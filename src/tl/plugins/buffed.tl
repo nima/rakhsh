@@ -54,10 +54,12 @@ function M.lazy(): {PluginSpec}
   local bufferline_spec = ({
     "akinsho/bufferline.nvim",
     lazy = false,
+    dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function(): nil
-      local _mod = "bufferline"
-      local bufferline = (require(_mod) as BufferlineModule)
-      bufferline.setup({
+      --+ bufferline needs termguicolors (must be set before setup())
+      vim.opt.termguicolors = true
+
+      local cfg = {
         options = {
           mode = "buffers",               --+ show buffers, not tabpages
           numbers = "ordinal",            --+ true buffer ids visible
@@ -66,10 +68,31 @@ function M.lazy(): {PluginSpec}
           diagnostics = "nvim_lsp",       --+ since using LSP
           separator_style = "thin",
         },
-      })
+      }
 
-      --+ bufferline needs termguicolors
-      vim.opt.termguicolors = true
+      local function _apply(): nil
+        local _mod = "bufferline"
+        local ok, bufferline = pcall(require, _mod)
+        if not ok then
+          return
+        end
+
+        local ok2, err = pcall((bufferline as BufferlineModule).setup, cfg)
+        if not ok2 then
+          vim.notify("[bufferline] setup failed: " .. tostring(err), vim.log.levels.ERROR)
+        end
+      end
+      local function apply() vim.schedule(_apply) end
+
+      local aug = vim.api.nvim_create_augroup("rx_bufferline", { clear = true })
+      vim.api.nvim_create_autocmd("ColorScheme", { group = aug, callback = apply })
+
+      --+ Run once when UI is ready so bufferline wins over late startup mutations.
+      vim.api.nvim_create_autocmd("UIEnter", {
+        group = aug,
+        once = true,
+        callback = apply,
+      })
     end,
   } as PluginSpec)
 

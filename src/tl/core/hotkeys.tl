@@ -96,9 +96,9 @@ end
 local type TelescopeMapFn = function(mode: string, lhs: string, fn: function(integer): nil): nil
 
 local keymaps = {
-  { mode = "n", role = R.Naked, key = "<C-F5>", internal = true, rhs = "<cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-Space>", internal = true, rhs = "<cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-c>", internal = true, rhs = "<cmd>:confirm quitall<CR>", desc = "Quitall", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-F5>", internal = true, rhs = "<Cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-Space>", internal = true, rhs = "<Cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
+  { mode = "n", role = R.Naked, key = "<C-c>", internal = true, rhs = "<Cmd>:confirm bdelete<CR>", desc = "Quitall", tags = { T.ActionView } },
 }
 
 --------------------------------------------------------------------------------

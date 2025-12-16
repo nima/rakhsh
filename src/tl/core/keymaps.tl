@@ -116,9 +116,11 @@ local function mklhs(mode: string, role: t.roles.Role, key: string): string
     error(("safemap: unknown role '%s' for mode '%s'"):format(role.name, mode))
   end
 
-  --! Special-case: insert META → <C-x>
-  if mode == "i" and prefix == "<C-" then
-    return prefix .. key .. ">"
+  --- Special Case: <C-*>x → <C-x> 
+  if prefix:find("%*") then
+    local rplc, cnt = prefix:gsub("%%*", key)
+    if cnt == 1 then return rplc end
+    error("Expected 1 literal asterisk; received " .. tostring(cnt))
   end
 
   return prefix .. key

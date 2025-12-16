@@ -40,6 +40,8 @@ def main():
         "Normal Font": NERD_FONT,
         "Non Ascii Font": NERD_FONT,
         "Use Non-ASCII Font": True,
+        "Option Key Sends": 2,       # Sets Left Option key to Esc+
+        "Right Option Key Sends": 2, # Sets Right Option key to Esc+
         "Smart Selection Rules": [
             {
                 "notes": "Rakhsh: code file with optional :line:col",
