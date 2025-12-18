@@ -96,82 +96,70 @@ end
 local function mklhs(mode: string, role: t.roles.Role, key: string): string
   ensure_role(mode, role, key)
 
-  local mode_cfg = t.roles.ActivationPrefix[mode]
-  if not mode_cfg then
-    error("safemap: unsupported mode: " .. tostring(mode))
-  end
+  local leader = role.leader
 
-  local prefix = mode_cfg[role]
-
-  --+ Visual/select modes typically share the same activation prefixes as normal mode.
-  --+ This avoids needing to duplicate role→prefix tables across modes.
-  if not prefix and (mode == "v" or mode == "x" or mode == "s") then
-    local n_cfg = t.roles.ActivationPrefix["n"]
-    if n_cfg then
-      prefix = n_cfg[role]
-    end
-  end
-
-  if not prefix then
-    error(("safemap: unknown role '%s' for mode '%s'"):format(role.name, mode))
-  end
-
-  --- Special Case: <C-*>x → <C-x> 
-  if prefix:find("%*") then
-    local rplc, cnt = prefix:gsub("%*", key)
+  -- Wildcard leader like `<C-*>` / `<A-*>` / `<S-*>`.
+  if leader:find("%*") then
+    local rplc, cnt = leader:gsub("%*", key)
     if cnt == 1 then return rplc end
-    error("Expected 1 literal asterisk; received " .. tostring(cnt) .. ": " .. prefix)
+    error("Expected 1 literal asterisk; received " .. tostring(cnt) .. ": " .. leader)
   end
 
-  return prefix .. key
-end
-
-local function mode_cfg_for(mode: string): {t.roles.Role: string}
-  local cfg = t.roles.ActivationPrefix[mode]
-  if cfg then
-    return cfg
-  end
-
-  -- Reuse normal-mode prefixes for visual/select modes.
-  if mode == "v" or mode == "x" or mode == "s" then
-    local n_cfg = t.roles.ActivationPrefix["n"]
-    if n_cfg then
-      return n_cfg
-    end
-  end
-
-  error("keymaps: unsupported mode: " .. tostring(mode))
+  return leader .. key
 end
 
 local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
-  local cfg = mode_cfg_for(mode)
-
-  -- Choose the longest matching prefix so Roles.Naked ("") doesn't shadow everything.
+  -- We derive decode rules from Roles[*].leader. `mode` is only used for error messages.
   local best_role: t.roles.Role | nil = nil
-  local best_prefix: string = ""
+  local best_tail: string = ""
+  local best_len: integer = -1
 
-  for role, prefix in pairs(cfg) do
-    if prefix ~= "" and lhs:sub(1, #prefix) == prefix then
-      if #prefix > #best_prefix then
-        best_prefix = prefix
-        best_role = role
+  for _, any_role in pairs(t.roles.Roles as {string:any}) do
+    if type(any_role) == "table" and (any_role as {string:any}).name ~= nil and (any_role as {string:any}).leader ~= nil then
+      local role = any_role as t.roles.Role
+      local leader = role.leader
+
+      if leader == "" then
+        -- Naked role matches anything, but only if we didn't find a more specific match.
+        if best_len < 0 then
+          best_role = role
+          best_tail = lhs
+          best_len = 0
+        end
+
+      elseif leader:find("%*") then
+        -- Convert leader containing `*` into a Lua pattern that captures the wildcard.
+        -- Example: `<C-*>` -> `^<C%-(.+)>$`
+        local pat = "^" .. leader:gsub("([%^%$%(%)%%%.%[%]%+%-%?])", "%%%1"):gsub("%%%*", "(.+)") .. "$"
+        local cap = lhs:match(pat)
+        if cap ~= nil then
+          local eff_len = #leader - 1
+          if eff_len > best_len then
+            best_role = role
+            best_tail = cap as string
+            best_len = eff_len
+          end
+        end
+
+      else
+        if lhs:sub(1, #leader) == leader then
+          local tail = lhs:sub(#leader + 1)
+          local eff_len = #leader
+          if eff_len > best_len then
+            best_role = role
+            best_tail = tail
+            best_len = eff_len
+          end
+        end
       end
     end
   end
 
   if best_role == nil then
-    local naked = t.roles.Roles.Naked
-    local naked_prefix = cfg[naked]
-    if naked_prefix ~= nil and lhs:sub(1, #naked_prefix) == naked_prefix then
-      best_role = naked
-      best_prefix = naked_prefix
-    else
-      error(("docmap: could not decode lhs '%s' for mode '%s'"):format(lhs, mode))
-    end
+    error(("docmap: could not decode lhs '%s' for mode '%s'"):format(lhs, mode))
   end
 
-  local tail = lhs:sub(#best_prefix + 1)
-  return best_role, tail
+  return best_role, best_tail
 end
 
 local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean

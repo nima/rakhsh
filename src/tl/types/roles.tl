@@ -2,94 +2,160 @@ local _tags = require("types.tags")
 local T = _tags.Tag
 local Ts = _tags.Tags
 
-local record Role
-  name: string
-  tag: string
-  desc: string
+--- Keyboard atlas
+---
+--- A KbRegion is a *curated* set of well-known Vim key neighborhoods (HomeRow, WASD, etc.).
+--- We intentionally do NOT support arbitrary / user-defined regions.
+---
+--- IMPORTANT INVARIANT:
+---   - `KbAtlas.All` is a sentinel meaning "no filtering".
+---   - i.e. an empty region means "accept any suffix key".
+---
+--- Non-empty regions are used when a role leader contains a wildcard (e.g. `<C-*>`) and we want
+--- to restrict expansion to a familiar neighborhood.
+local type KbKeys = {string}
+local record KbRegion
+  Alpha:       KbKeys
+  HomeRow:     KbKeys
+  HomeBlob:    KbKeys
+  CommaDot:    KbKeys
+  Numeric:     KbKeys
+  Arrows:      KbKeys
+  WASD:        KbKeys
+  Function:    KbKeys
+  Punctuation: KbKeys
+  Brackets:    KbKeys
+  Symbols:     KbKeys
+  Functional:  KbKeys
+  All:         KbKeys
 end
 
-local record RoleSet
-  Naked:   Role
-  Power:   Role
-  TUI:     Role
-  Go:      Role
-  GoVia:   Role
-  Window:  Role
-  Toggle:  Role
-  Info:    Role
-  Select:  Role
-  View:    Role
-  Edit:    Role
-  System:  Role
-  Layout:  Role
-  ForRent: Role
-  Rakhsh:  Role
-  AI:      Role
-  SCM:     Role
-  LSP:     Role
-  LSPGoto: Role
-  LSPInfo: Role
-  LSPEdit: Role
-  LSPDiag: Role
+local KbAtlas<total>: KbRegion = {
+  Alpha       = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" },
+  HomeRow     = { "h", "j", "k", "l" },
+  HomeBlob    = { "h", "j", "k", "l", "y", "u", "i", "o", "p", "n", "m" },
+  CommaDot    = { ",", "." },
+  Numeric     = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" },
+  Arrows      = { "<Up>", "<Down>", "<Left>", "<Right>" },
+  WASD        = { "w", "a", "s", "d" },
+  Function    = { "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" },
+  Punctuation = { ";", ".", "/", ",", "[", "]", "\\", "'", "-", "=" },
+  Brackets    = { "[", "]" },
+  Symbols     = { "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+" },
+  Functional  = { "<Tab>", "<CR>", "<Esc>", "<BS>", "<Space>" },
+  All         = {} --- Sentinel for ALL keys, not a bug
+}
+--+ <Tab> == <C-i>
+--+ <Esc> == <C-[>
+
+local enum Mode
+   "n" -- Normal
+   "i" -- Insert
+   "v" -- Visual (inclusive)
+   "x" -- Visual (strict)
+   "s" -- Select (substitute)
 end
-setmetatable(RoleSet, { __newindex = function() error("Cannot add new enum values to RoleSet") end })
 
-local Roles: RoleSet = {
-    Naked   = { name = "Naked", tag = "r/naked", desc = "These are not protected by any preceding keystrokes" },
-    Power   = { name = "PowerTool", tag = "r/power", desc = "Power moves to charm" },
-    TUI     = { name = "TextualUserInterface", tag = "r/tui", desc = "The Rakhsh IDE" },
-    Go      = { name = "NavigationGo", tag = "r/go", desc = "Immediate navigation: single-step jumps with no UI" },
-    GoVia   = { name = "NavigationVia", tag = "r/go", desc = "Navigation via an intermediate UI (pickers, lists, dialogs)" },
-    Window  = { name = "WindowManagement", tag = "r/native/w", desc = "TUI Window management" },
-    Toggle  = { name = "Toggle", tag = "r/toggle", desc = "It goes on... it goes off" },
-    Info    = { name = "Information", tag = "r/info", desc = "" },
-    Select  = { name = "Select", tag = "r/info", desc = "TUI pane selection" },
-    View    = { name = "View", tag = "r/info", desc = "View related" },
-    Edit    = { name = "Editor", tag = "r/edit", desc = "Editor commands" },
-    System  = { name = "System", tag = "r/edit", desc = "System related" },
-    Layout  = { name = "Layout", tag = "r/edit", desc = "Layout related" },
-    ForRent = { name = "ThisSpaceForRent", tag = "r/edit", desc = "This space for rent" },
-    Rakhsh  = { name = "RakhshIDE", tag = "r/ide", desc = "The Rakhsh IDE" },
-    AI      = { name = "ArtificialIntelligence", tag = "r/ai", desc = "Anything involving AI or LLM API calls" },
-    SCM     = { name = "SourceControlManagement", tag = "r/git", desc = "Anything related to Git" },
-    LSP     = { name = "LanguageServerProtocol", tag = "r/lsp", desc = "All LSP-related hotkeys" },
-    LSPGoto = { name = "LSPGoto", tag = "r/lsp", desc = "LSP goto" },
-    LSPInfo = { name = "LSPInfo", tag = "r/lsp", desc = "LSP inspection / info" },
-    LSPEdit = { name = "LSPEdit", tag = "r/lsp", desc = "LSP edits / refactors" },
-    LSPDiag = { name = "LSPDiagnostics", tag = "r/lsp", desc = "LSP diagnostics" },
+--= superset(regions)
+--
+--+ This merges multiple key-neighborhoods into a deduped list.
+--+ This is useful when you want one role to expand across several *specific* regions.
+--
+--- NOTE: This must NOT be used to build `KbAtlas.All` because `All` is a sentinel meaning
+--- "no filtering" (empty list).
+local function superset(regions: {KbKeys}): KbKeys
+  local seen: {string:boolean} = {}
+  local out: KbKeys = {}
+
+  local function add(keys: KbKeys)
+    for i = 1, #keys do
+      local k = keys[i]
+      if not seen[k] then
+        seen[k] = true
+        out[#out + 1] = k
+      end
+    end
+  end
+
+  for i = 1, #regions do
+    add(regions[i])
+  end
+
+  return out
+end
+-- ]=-
+
+--= RoleDatum
+--
+--+ `leader` may be a literal key sequence (e.g. "g", "<F12>") or may include a wildcard
+--+ expansion marker like `<C-*>` / `<A-*>` / `<S-*>`.
+--
+--- NOTE: When `leader` includes `*`, callers are expected to expand `*` over `region`.
+--- If `region` is empty (KbAtlas.All sentinel), expansion should NOT filter at all.
+local record RoleDatum
+  name:    string
+  tag:     string
+  desc:    string
+  leader:  string
+  region:  KbKeys
+end
+
+local record RoleData
+  Naked:     RoleDatum
+  Tradition: RoleDatum
+  Power:     RoleDatum
+  TUI:       RoleDatum
+  Go:        RoleDatum
+  GoVia:     RoleDatum
+  Window:    RoleDatum
+  Toggle:    RoleDatum
+  Info:      RoleDatum
+  Select:    RoleDatum
+  View:      RoleDatum
+  Edit:      RoleDatum
+  System:    RoleDatum
+  Layout:    RoleDatum
+  ForRent:   RoleDatum
+  Rakhsh:    RoleDatum
+  AI:        RoleDatum
+  SCM:       RoleDatum
+  LSPInfo:   RoleDatum
+  LSPEdit:   RoleDatum
+  LSPDiag:   RoleDatum
+  LSPGoto:   RoleDatum
+end
+
+local Roles<total>: RoleData = {
+  Naked     = { leader="",          region=KbAtlas.All, name="Naked", tag="r/naked", desc="These are not protected by any preceding keystrokes" },
+  Tradition = { leader="",          region=KbAtlas.All, name="Tradition", tag="r/trad", desc="Traditional muscle-memory vim keymaps" },
+  Power     = { leader="\\",        region=KbAtlas.All, name="PowerTool", tag="r/power", desc="Power moves to charm" },
+  TUI       = { leader="<Tab>",     region=KbAtlas.All, name="TextualUserInterface", tag="r/tui", desc="The Rakhsh IDE" },
+  Go        = { leader="g",         region=KbAtlas.All, name="NavigationGo", tag="r/go", desc="Immediate navigation: single-step jumps with no UI" },
+  GoVia     = { leader="<C-g>",     region=KbAtlas.All, name="NavigationVia", tag="r/go", desc="Navigation via an intermediate UI (pickers, lists, dialogs)" },
+  Window    = { leader="<C-w>",     region=KbAtlas.All, name="WindowManagement", tag="r/native/w", desc="TUI Window management" },
+  Toggle    = { leader="<Esc>",     region=KbAtlas.All, name="Toggle", tag="r/toggle", desc="It goes on... it goes off" },
+  Info      = { leader="<F2>",      region=KbAtlas.All, name="Information", tag="r/info", desc="" },
+  Select    = { leader="<S-*>",     region=KbAtlas.All, name="Select", tag="r/info", desc="TUI pane selection" },
+  View      = { leader="<A-*>",     region=KbAtlas.All, name="View", tag="r/info", desc="View related" },
+  Edit      = { leader="<C-*>",     region=KbAtlas.All, name="Editor", tag="r/edit", desc="Editor commands" },
+  System    = { leader="<C-S-*>",   region=KbAtlas.All, name="System", tag="r/edit", desc="System related" },
+  Layout    = { leader="<A-S-*>",   region=KbAtlas.All, name="Layout", tag="r/edit", desc="Layout related" },
+  ForRent   = { leader="<C-A-*>",   region=KbAtlas.All, name="ThisSpaceForRent", tag="r/edit", desc="This space for rent" },
+  Rakhsh    = { leader="<C-A-S-*>", region=KbAtlas.All, name="RakhshIDE", tag="r/ide", desc="The Rakhsh IDE" },
+  AI        = { leader="<F5>",      region=KbAtlas.All, name="ArtificialIntelligence", tag="r/ai", desc="Anything involving AI or LLM API calls" },
+  SCM       = { leader="<F10>",     region=KbAtlas.All, name="SourceControlManagement", tag="r/git", desc="Anything related to Git" },
+  LSPGoto   = { leader="<F12>",     region=KbAtlas.All, name="LSPGoto", tag="r/lsp", desc="LSP goto" },
+  LSPInfo   = { leader="<C-F12>",   region=KbAtlas.All, name="LSPInfo", tag="r/lsp", desc="LSP inspection / info" },
+  LSPEdit   = { leader="<A-F12>",   region=KbAtlas.All, name="LSPEdit", tag="r/lsp", desc="LSP edits / refactors" },
+  LSPDiag   = { leader="<S-F12>",   region=KbAtlas.All, name="LSPDiagnostics", tag="r/lsp", desc="LSP diagnostics" },
 }
-setmetatable(Roles, { __newindex = function() error("Cannot add new enum values to Roles") end })
+setmetatable(Roles, { 
+  __newindex = function(_: RoleData, k: any, _: any) 
+    error("Cannot add new value '" .. (k as string) .. "' to Roles") 
+  end 
+})
 
-local ActivationPrefix: {string: {Role: string}} = {
-    n = {
-        [Roles.Naked]   = "",
-        [Roles.Power]   = "\\",
-        [Roles.TUI]     = "<Tab>", --+ AKA <C-i>
-        [Roles.Go]      = "g",
-        [Roles.GoVia]   = "<C-g>",
-        [Roles.Window]  = "<C-w>",
-        [Roles.Toggle]  = "<Esc>",
-        [Roles.Info]    = "<F2>",
-        [Roles.Select]  = "<S-*>",
-        [Roles.View]    = "<A-*>",
-        [Roles.Edit]    = "<C-*>",
-        [Roles.System]  = "<C-S-*>",
-        [Roles.Layout]  = "<A-S-*>",
-        [Roles.ForRent] = "<C-A-*>",
-        [Roles.Rakhsh]  = "<C-A-S-*>",
-        [Roles.AI]      = "<F5>",
-        [Roles.SCM]     = "<F10>",
-        [Roles.LSPInfo] = "<F12>",
-        [Roles.LSPEdit] = "<C-F12>",
-        [Roles.LSPDiag] = "<A-F12>",
-        [Roles.LSPGoto] = "<S-F12>",
-    },
-    v = { [Roles.AI] = "<F5>", },
-    i = {},
-}
-setmetatable(ActivationPrefix, { __newindex = function() error("Cannot add new enum values to Roles") end })
-
-local function complete(role: Role, tags: {T}, external: boolean): {T}
+local function complete(role: RoleDatum, tags: {T}, external: boolean): {T}
   local out: {T} = {}
   table.move(tags, 1, #tags, 1, out)
   out[#out + 1] = { tid = role.tag } as T
@@ -98,10 +164,11 @@ local function complete(role: Role, tags: {T}, external: boolean): {T}
 end
 
 local M = {
-    Role             = Role,
-    Roles            = Roles,
-    ActivationPrefix = ActivationPrefix,
-    complete         = complete,
+  complete  = complete,
+  superset  = superset,
+  Mode      = Mode,
+  Role      = RoleDatum,
+  Roles     = Roles,
 }
 
 return M
