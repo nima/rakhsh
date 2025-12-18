@@ -6,7 +6,7 @@ global vim: t.vim.Vim
 
 --+ One entry per safemap-registered keymap
 local record RakhshKeymap
-  mode: string
+  mode: t.roles.Mode
   role: t.roles.Role
   key: string
   internal: boolean
@@ -20,54 +20,39 @@ local registry: {RakhshKeymap} = {}
 local type RegistryMap = { string: boolean }
 local registry_map: RegistryMap = {}
 
-local function lhs_for(mode: string, role: t.roles.Role, key: string): string
-  local mode_cfg = t.roles.ActivationPrefix[mode]
-  if not mode_cfg then
-    -- Visual/select modes can reuse normal-mode prefixes.
-    if mode == "v" or mode == "x" or mode == "s" then
-      mode_cfg = t.roles.ActivationPrefix["n"]
-    end
-  end
-  if not mode_cfg then
-    -- Don't crash the picker; just show the raw key.
+local function lhs_for(_mode: t.roles.Mode, role: t.roles.Role, key: string): string
+  local leader = role.leader
+
+  -- Naked / Tradition-style roles: the key is the full lhs.
+  if leader == "" then
     return key
   end
 
-  local prefix = mode_cfg[role]
-
-  -- If the role isn't defined for this mode, fall back to normal-mode prefixes for v/x/s.
-  if not prefix and (mode == "v" or mode == "x" or mode == "s") then
-    local n_cfg = t.roles.ActivationPrefix["n"]
-    if n_cfg then
-      prefix = n_cfg[role]
+  -- Wildcard leader like `<C-*>`, `<A-*>`, `<S-*>`.
+  if leader:find("%*") then
+    local rplc, cnt = leader:gsub("%*", key)
+    if cnt == 1 then
+      return rplc
     end
+    error("Expected exactly one '*' in leader: " .. leader)
   end
 
-  -- Still unknown: don't crash; show the raw key.
-  if not prefix then
-    return key
-  end
-
-  -- Insert META special-case: <C-x>
-  if mode == "i" and prefix == "<C-" then
-    return prefix .. key .. ">"
-  end
-
-  return prefix .. key
+  -- Simple prefix leader.
+  return leader .. key
 end
 
 local function registry_key(m: RakhshKeymap): string
   return table.concat({
-    m.mode or "",
-    m.role and tostring(m.role) or "",
-    m.key or "",
+    m.mode,
+    tostring(m.role),
+    m.key,
     m.group or "",
     m.internal and "1" or "0",
   }, "\0")
 end
 
 local function format_tags(tags: { t.tags.Tag }): string
-  if tags == nil or #tags == 0 then
+  if #tags == 0 then
     return ""
   end
 
@@ -93,7 +78,7 @@ local record TelescopePicker
   find: function(TelescopePicker): nil
 end
 
-local type TelescopeMapFn = function(mode: string, lhs: string, fn: function(integer): nil): nil
+local type TelescopeMapFn = function(mode: t.roles.Mode, lhs: string, fn: function(integer): nil): nil
 
 local keymaps = {
   { mode = "n", role = R.Naked, key = "<C-F5>", internal = true, rhs = "<Cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
@@ -175,7 +160,7 @@ function M.show_help(): nil
 
   local function make_display(entry: TelescopeEntry): string
     local m = entry.value
-    local desc = m.desc or ""
+    local desc = m.desc
     local tags_suffix = format_tags(m.tags)
 
     return displayer({
@@ -196,8 +181,8 @@ function M.show_help(): nil
         local ordinal = table.concat({
           m.mode,
           lhs,
-          (m.desc or ""),
-          (m.rhs or ""),
+          m.desc,
+          m.rhs,
           tags_suffix,
         }, " ")
         return {
