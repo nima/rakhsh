@@ -16,16 +16,23 @@ local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
   return {
-    { mode = "n", role = R.Power, key = "\\", rhs = "<cmd>Telescope keymaps<CR>", desc = "Show all keymaps", tags = { T.ActionView, T.TargetDoc }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "ff", rhs = "<cmd>Telescope find_files<CR>", desc = "Find files (fs)", tags = { T.ActionSearch, T.TargetFile }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "fb", rhs = "<cmd>Telescope file_browser<CR>", desc = "File browser", tags = { T.ActionList, T.TargetFile }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "fr", rhs = "<cmd>Telescope oldfiles<CR>", desc = "Recent (MRU)", tags = { T.ActionList, T.TargetFile, T.ViaMRU }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "gg", rhs = "<cmd>Telescope live_grep<CR>", desc = "Search content (fuzzy)", tags = { T.ActionSearch, T.TargetFile, T.ViaContent }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "gr", rhs = "<cmd>Telescope grep_string<CR>", desc = "Search content (regex)", tags = { T.ActionSearch, T.TargetFile, T.ViaContent }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "bb", rhs = "<cmd>Telescope buffers<CR>", desc = "Buffers", tags = { T.ActionList, T.TargetBuffer }, on = On.Immediate },
-    { mode = "n", role = R.GoVia, key = "bc", rhs = "<cmd>Telescope current_buffer_fuzzy_find<CR>", desc = "Search buffer", tags = { T.ActionSearch, T.TargetBuffer, T.ViaContent }, on = On.Immediate },
-    { mode = "n", role = R.SCM,   key = "f",  rhs = "<cmd>Telescope git_files<CR>", desc = "Find files (git)", tags = { T.ActionSearch, T.TargetFile, T.ViaGit }, on = On.Immediate },
-    { mode = "n", role = R.SCM,   key = "m",  rhs = "<cmd>Telescope git_status<CR>", desc = "Repo modified files", tags = { T.ActionView, T.TargetFile }, on = On.Immediate },
+    { mode="n", role=R.Info,   key="?",  on=On.Immediate, rhs="<Cmd>Telescope keymaps<CR>", desc="[Telescope] Walk keymap listing",                    tags={ T.ActionHelp, T.TargetBuffer } },
+    { mode="n", role=R.GoVia,  key="ff", on=On.Immediate, rhs="<Cmd>Telescope find_files<CR>", desc="[Telescope] Walk find files listing",             tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="fb", on=On.Immediate, rhs="<Cmd>Telescope file_browser<CR>", desc="[Telescope] File browser",                      tags={ T.ActionList, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="fr", on=On.Immediate, rhs="<Cmd>Telescope oldfiles<CR>", desc="[Telescope] Search Recent Files (MRU)",             tags={ T.ActionList, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="gg", on=On.Immediate, rhs="<Cmd>Telescope live_grep<CR>", desc="[Telescope] Search via grep",                      tags={ T.ActionSearch, T.TargetFile, T.ViaContent } },
+    { mode="n", role=R.GoVia,  key="gw", on=On.Immediate, rhs="<Cmd>Telescope grep_string<CR>", desc="[Telescope] Search current word",                tags={ T.ActionSearch, T.TargetFile, T.ViaContent } },
+    { mode="n", role=R.GoVia,  key="bb", on=On.Immediate, rhs="<Cmd>Telescope buffers<CR>", desc="[Telescope] Walk extant buffers",                    tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="bc", on=On.Immediate, rhs="<Cmd>Telescope current_buffer_fuzzy_find<CR>", desc="[Telescope] Search active buffer", tags={ T.ActionSearch, T.TargetBuffer, T.ViaContent } },
+    { mode="n", role=R.SCM,    key="f",  on=On.Immediate, rhs="<Cmd>Telescope git_files<CR>", desc="[Telescope] Find files (git)",                     tags={ T.ActionSearch, T.TargetFile, T.ViaGit } },
+    { mode="n", role=R.SCM,    key="m",  on=On.Immediate, rhs="<Cmd>Telescope git_status<CR>", desc="[Telescope] Repo modified files",                 tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.Select, key="h",  on=On.Immediate, rhs="<C-w><C-h>", desc="[Telescope] Move focus to the left window",                          tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.Select, key="l",  on=On.Immediate, rhs="<C-w><C-l>", desc="[Telescope] Move focus to the right window",                         tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.Select, key="j",  on=On.Immediate, rhs="<C-w><C-j>", desc="[Telescope] Move focus to the lower window",                         tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.Select, key="k",  on=On.Immediate, rhs="<C-w><C-k>", desc="[Telescope] Move focus to the upper window",                         tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="s",  on=On.Immediate, rhs="<Cmd>Telescope builtin<CR>", desc="[Telescope] [S]earch [S]elect Telescope",            tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="d",  on=On.Immediate, rhs="<Cmd>Telescope diagnostics<CR>", desc="[Telescope] Search diagnostics",                 tags={ T.ActionView, T.TargetFile } },
+    { mode="n", role=R.GoVia,  key="r",  on=On.Immediate, rhs="<Cmd>Telescope resume<CR>", desc="[Telescope] Search resume",                           tags={ T.ActionView, T.TargetFile } },
   }
 end
 

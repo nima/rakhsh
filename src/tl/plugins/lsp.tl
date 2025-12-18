@@ -93,13 +93,28 @@ function M.lazy(): {PluginSpec}
           -- and keep them documented in our keymap registry.
 
           -- LSP navigation / actions.
-          keymaps.safemap_buf(b, "n", R.Go, "d",  vim.lsp.buf.definition,       keymaps.opts("[LSP] Goto definition",       { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "D",  vim.lsp.buf.declaration,      keymaps.opts("[LSP] Goto declaration",      { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "i",  vim.lsp.buf.implementation,   keymaps.opts("[LSP] Goto implementation",   { T.ActionNavigate, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "rr", vim.lsp.buf.references,       keymaps.opts("[LSP] References",            { T.ActionList,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "rt", vim.lsp.buf.type_definition,  keymaps.opts("[LSP] goto type definition",  { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "rn", vim.lsp.buf.rename,           keymaps.opts("[LSP] rename symbol",         { T.ActionEdit,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Go, "ra", vim.lsp.buf.code_action,      keymaps.opts("[LSP] code action",           { T.ActionEdit,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "d",  vim.lsp.buf.definition,       keymaps.opts("[LSP] Goto definition",       { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "D",  vim.lsp.buf.declaration,      keymaps.opts("[LSP] Goto declaration",      { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "i",  vim.lsp.buf.implementation,   keymaps.opts("[LSP] Goto implementation",   { T.ActionNavigate, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPInfo, "rr", vim.lsp.buf.references,       keymaps.opts("[LSP] References",            { T.ActionList,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "rt", vim.lsp.buf.type_definition,  keymaps.opts("[LSP] Goto type definition",  { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPEdit, "rn", vim.lsp.buf.rename,           keymaps.opts("[LSP] Rename symbol",         { T.ActionEdit,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPEdit, "ra", vim.lsp.buf.code_action,      keymaps.opts("[LSP] code action",           { T.ActionEdit,     T.TargetBuffer }))
+
+          -- Back-compat (common defaults): only in LSP-attached buffers.
+          keymaps.safemap_buf(b, "n", R.Naked, "grn", vim.lsp.buf.rename,           keymaps.opts("[LSP] Rename",              { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Naked, "gra", vim.lsp.buf.code_action,      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "x", R.Naked, "gra", vim.lsp.buf.code_action,      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
+
+          keymaps.safemap_buf(b, "n", R.Naked, "grD", vim.lsp.buf.declaration,      keymaps.opts("[LSP] Goto declaration",    { T.ActionView, T.TargetBuffer, T.Compat }))
+
+          keymaps.safemap_buf(b, "n", R.Naked, "grr", "<Cmd>Telescope lsp_references<CR>",       keymaps.opts("[LSP] References",       { T.ActionList, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Naked, "gri", "<Cmd>Telescope lsp_implementations<CR>",  keymaps.opts("[LSP] Implementations",  { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Naked, "grd", "<Cmd>Telescope lsp_definitions<CR>",      keymaps.opts("[LSP] Definitions",      { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Naked, "grt", "<Cmd>Telescope lsp_type_definitions<CR>", keymaps.opts("[LSP] Type definitions", { T.ActionView, T.TargetBuffer, T.Compat }))
+
+          keymaps.safemap_buf(b, "n", R.Naked, "gO", "<Cmd>Telescope lsp_document_symbols<CR>",           keymaps.opts("[LSP] Document symbols",  { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Naked, "gW", "<Cmd>Telescope lsp_dynamic_workspace_symbols<CR>",  keymaps.opts("[LSP] Workspace symbols", { T.ActionView, T.TargetWorkspace, T.Compat }))
 
           -- LSP info/help.
           keymaps.docmap_buf(b, "n", "K",  keymaps.opts("[LSP] hover", { T.ActionHelp, T.TargetBuffer }))
