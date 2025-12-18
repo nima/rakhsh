@@ -118,9 +118,9 @@ local function mklhs(mode: string, role: t.roles.Role, key: string): string
 
   --- Special Case: <C-*>x → <C-x> 
   if prefix:find("%*") then
-    local rplc, cnt = prefix:gsub("%%*", key)
+    local rplc, cnt = prefix:gsub("%*", key)
     if cnt == 1 then return rplc end
-    error("Expected 1 literal asterisk; received " .. tostring(cnt))
+    error("Expected 1 literal asterisk; received " .. tostring(cnt) .. ": " .. prefix)
   end
 
   return prefix .. key

@@ -50,6 +50,8 @@ local record TagTable
 
     --+ Other
     External: Tag
+    Compat: Tag
+    Hidden: Tag
 end
 
 local Tags: TagTable = {
@@ -102,6 +104,8 @@ local Tags: TagTable = {
 
     --+ Other
     External          = { tid = "extern" },     -- External keymaps that we merely document in registry
+    Compat            = { tid = "compat" },     -- These are here only for preserving backward compatibility
+    Hidden            = { tid = "hidden" },     -- Hide these from the cheatsheet
 }
 setmetatable(Tags, { __newindex = function() error("Cannot add new enum values to Tags") end })
 

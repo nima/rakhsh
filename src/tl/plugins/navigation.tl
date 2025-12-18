@@ -17,7 +17,7 @@ local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
   return {
-    { mode = "n", role = R.Info, key = "?", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.TargetDialogue }, on = OnEvents.Immediate },
+    { mode = "n", role = R.Info, key = "/", rhs = "<cmd>RakhshKeys<CR>", desc = "Rakhsh Hotkeys", tags = { T.ActionView, T.TargetDialogue }, on = OnEvents.Immediate },
   }
 end
 
