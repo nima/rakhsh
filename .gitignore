@@ -1,6 +1,6 @@
 .vscode
 .deps
-build
+stage
 Pipfile
 package-lock.json
 package.json

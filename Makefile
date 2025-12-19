@@ -195,18 +195,23 @@ dependencies: caches installed outdated
 
 pre-validate: src/tl dependencies
 	@echo -e "[$(call magenta,$@)]"
-	@set -e; for f in $$(rg -g '*.tl' --files); do $(tlchk) -I$< "$$f"; done
+	@set -e; for f in $$(rg src -g '*.tl' --files); do $(tlchk) -I$< "$$f"; done
 .PHONY: pre-validate
 
-build: pre-validate
+extern: extern/teal-types
+extern/teal-types:
+	git submodule add https://github.com/teal-language/teal-types.git $@
+.PHONY: extern
+
+stage: extern pre-validate
 	@echo -e "[$(call blue,$@)]"
-	@rm -rf build
-	@mkdir -p build
+	@rm -rf stage
+	@mkdir -p stage
 	@mkdir -p $(RAKHSH_CACHE)
 	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
 	@cd rx-louder && cyan build --prune > $(RAKHSH_CACHE)/cyan-louder.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan-louder.log && exit 1; }
-	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ build/lua/
-.PHONY: build
+	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ stage/lua/
+.PHONY: stage
 
 iTerm2.regex:; @jq -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
 iTerm2:
@@ -231,12 +236,12 @@ iTerm2.profile:
 
 $(RAKHSH_LAZY):
 	@bin/rx
-install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
+install: $(RAKHSH_CONFIG) stage iTerm2 $(RAKHSH_LAZY) link splash
 	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to \`Rakhsh\`"
 	@echo -e "[$(call green,$@)] Install complete"
 .PHONY: install
 
-$(RAKHSH_CONFIG): build
+$(RAKHSH_CONFIG): stage
 	@#rsync -ai --info=NAME0 --delete $</ $@/
 	@rsync -a --info=NAME0 --delete $</ $@/
 	@mv $@/lua/init.lua $@/
@@ -275,7 +280,7 @@ purge: uninstall
 
 clean:
 	@echo -e "[$(call yellow,$@)]"
-	rm -rf build
+	rm -rf stage
 	rm -rf rx-louder/lua
 .PHONY: clean
 
