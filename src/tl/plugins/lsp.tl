@@ -79,7 +79,8 @@ function M.lazy(): {PluginSpec}
       lsp.config("pyright", { capabilities = capabilities, settings = { python = { pythonPath = get_python_executable_path() }}})
       lsp.config("gopls",   { capabilities = capabilities })
       lsp.config("lua_ls", { capabilities = capabilities, settings = luaCfg })
-      lsp.enable({ "bashls", "clangd", "pyright", "gopls", "lua_ls" })
+      lsp.config("teal_ls", { capabilities = capabilities })
+      lsp.enable({ "bashls", "clangd", "pyright", "gopls", "lua_ls", "teal_ls" })
 
       local api = vim.api as LspAttachApi
       api.nvim_create_autocmd("LspAttach", {
