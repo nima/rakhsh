@@ -1,0 +1,6 @@
+[submodule "src/tl/types/tlt"]
+	path = src/tl/types/tlt
+	url = https://github.com/teal-language/teal-types.git
+[submodule "extern/teal-types"]
+	path = extern/teal-types
+	url = https://github.com/teal-language/teal-types.git
