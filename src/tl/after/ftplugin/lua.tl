@@ -1,12 +1,12 @@
-local t = require("types")
-global vim: t.vim.Vim
-local vimbo = vim.bo[0]
+local vimbo = vim.bo
 
 -- Lua
-vim.opt.modeline = false
-vim.opt.modelines = 0
-vim.opt.modelineexpr = false
+vim.o.modeline = false
+vim.o.modelines = 0
+vim.o.modelineexpr = false
+
 vimbo.expandtab   = true
 vimbo.shiftwidth  = 2
 vimbo.tabstop     = 2
 vimbo.softtabstop = 2
+

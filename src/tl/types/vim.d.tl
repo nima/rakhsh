@@ -1,0 +1,1 @@
+../../../extern/teal-types/types/neovim/vim.d.tl

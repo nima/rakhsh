@@ -3,7 +3,6 @@ local c = require("core.config")
 local t = require("types")
 local T = t.tags.Tags
 local R = t.roles.Roles
-global vim: t.vim.Vim
 
 local OnEvents = t.plugins.KeymapEvents
 local type PluginSpec = t.plugins.PluginSpec
@@ -28,11 +27,12 @@ end
 local trailing_ws_match_id: integer | nil = nil
 
 function M.init(): nil
-  local group = vim.api.nvim_create_augroup("RakhshTrailingWhitespace", { clear = true })
+  local GROUP_NAME = "RakhshTrailingWhitespace"
+  vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
 
   local function enable_trailing_ws_match(_ev): nil
     local bufnr = vim.api.nvim_get_current_buf()
-    local ft = vim.api.nvim_buf_get_option(bufnr, "filetype") as string
+    local ft = (vim.api.nvim_get_option_value("filetype", ({ buf = bufnr } as vim.GetOptionValueOpts)) as string)
     if not c.languages[ft] then
       if trailing_ws_match_id ~= nil then
         local _ok, _ = pcall(vim.fn.matchdelete, trailing_ws_match_id)
@@ -51,18 +51,18 @@ function M.init(): nil
     end
 
     --+ highlight trailing whitespace at end of line and remember the match id
-    trailing_ws_match_id = vim.fn.matchadd("RakhshExtraWhitespace", [[\s\+$]], 10, -1)
+    trailing_ws_match_id = (vim.fn.matchadd("RakhshExtraWhitespace", [[\s\+$]], 10, -1) as integer)
   end
 
   --+ Re-apply match when entering a window or leaving insert mode
   vim.api.nvim_create_autocmd({ "BufWinEnter", "InsertLeave" }, {
-    group = group,
+    group = GROUP_NAME,
     callback = enable_trailing_ws_match,
   })
 
   --+ Clear matches when leaving the window
   vim.api.nvim_create_autocmd("BufWinLeave", {
-    group = group,
+    group = GROUP_NAME,
     callback = function(_ev): nil
       if trailing_ws_match_id ~= nil then
         local _ok, _ = pcall(vim.fn.matchdelete, trailing_ws_match_id)

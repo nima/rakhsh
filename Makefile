@@ -104,7 +104,7 @@ define luarocks-install
 	@if grep -Fqw $1 $(LUAROCKS_INSTALLED) 2>/dev/null; then\
 	  if grep -Fqw $1 $(LUAROCKS_OUTDATED) 2>/dev/null; then\
 	    printf "$(luarocks_t) Upgrading %s...\n" "$1";\
-	    $(luarocks) upgrade $1;\
+	    $(luarocks) install $1;\
 	    touch $(LUAROCKS_DIRTY);\
 	  else\
 	    printf "$(luarocks_t) %s...$(call good,GOOD)\n" "$1";\
@@ -194,22 +194,40 @@ dependencies: caches installed outdated
 .PHONY: dependencies
 
 pre-validate: src/tl dependencies
-	@echo -e "[$(call magenta,$@)]"
-	@set -e; for f in $$(rg src -g '*.tl' --files); do $(tlchk) -I$< "$$f"; done
+	@mkdir -p $(RAKHSH_CACHE)
+	@for f in $$(rg src -g '*.tl' --files); do\
+		printf "[$(call magenta,$@)] %s..." "$$f";\
+		$(tlchk) -I$< "$$f" 2>$(RAKHSH_CACHE)/crash.log && echo -e "$(call green,PASS)" || {\
+			echo -e "$(call red,FAIL)";\
+			bat $(RAKHSH_CACHE)/crash.log;\
+			exit 1;\
+		};\
+	done
 .PHONY: pre-validate
 
-extern: extern/teal-types
+extern: extern/teal-types/LICENSE
 extern/teal-types:
 	git submodule add https://github.com/teal-language/teal-types.git $@
+extern/teal-types/LICENSE:
+	git submodule update --init --recursive
 .PHONY: extern
 
 stage: extern pre-validate
-	@echo -e "[$(call blue,$@)]"
 	@rm -rf stage
 	@mkdir -p stage
 	@mkdir -p $(RAKHSH_CACHE)
-	@cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan.log && exit 1; }
-	@cd rx-louder && cyan build --prune > $(RAKHSH_CACHE)/cyan-louder.log 2>&1 || { cat $(RAKHSH_CACHE)/cyan-louder.log && exit 1; }
+	@printf "[$(call blue,$@)] %s..." "cyan[rx]";\
+		cyan build --prune > $(RAKHSH_CACHE)/cyan.log 2>&1 && echo -e "$(call green,PASS)" || {\
+			echo -e "$(call red,FAIL)";\
+			bat $(RAKHSH_CACHE)/cyan.log;\
+			exit 1;\
+		}
+	@printf "[$(call blue,$@)] %s..." "cyan[rx-louder]";\
+		cd rx-louder && cyan build --prune > $(RAKHSH_CACHE)/cyan-louder.log 2>&1 && echo -e "$(call green,PASS)" || {\
+			echo -e "$(call red,FAIL)";\
+			bat $(RAKHSH_CACHE)/cyan-louder.log;\
+			exit 1;\
+		}
 	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ stage/lua/
 .PHONY: stage
 

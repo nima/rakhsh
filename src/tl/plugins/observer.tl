@@ -1,7 +1,5 @@
 local t = require("types")
 
-global vim: t.vim.Vim
-
 local T = t.tags.Tags
 local R = t.roles.Roles
 local OnEvents = t.plugins.KeymapEvents
@@ -11,45 +9,45 @@ local type PluginKeymap = t.plugins.PluginKeymap
 
 --- Line Numbers
 local function toggle_numbers()
-  local nu  = vim.wo[0].number
-  local rnu = vim.wo[0].relativenumber
+  local nu  = vim.wo.number
+  local rnu = vim.wo.relativenumber
 
   if not nu and not rnu then
     -- none → absolute
-    vim.wo[0].number = true
-    vim.wo[0].relativenumber = false
+    vim.wo.number = true
+    vim.wo.relativenumber = false
 
   elseif nu and not rnu then
     -- absolute → absolute + relative
-    vim.wo[0].relativenumber = true
+    vim.wo.relativenumber = true
 
   else
     -- both (or only relative) → none
-    vim.wo[0].number = false
-    vim.wo[0].relativenumber = false
+    vim.wo.number = false
+    vim.wo.relativenumber = false
   end
 end
 
 --- Crosshairs
 local function cycle_cursor_modes()
-  local cl = vim.wo[0].cursorline
-  local cc = vim.wo[0].cursorcolumn
+  local cl = vim.wo.cursorline
+  local cc = vim.wo.cursorcolumn
 
   if cl and cc then
     -- H+V → H
-    vim.wo[0].cursorcolumn = false
+    vim.wo.cursorcolumn = false
   elseif cl and not cc then
     -- H → V
-    vim.wo[0].cursorline = false
-    vim.wo[0].cursorcolumn = true
+    vim.wo.cursorline = false
+    vim.wo.cursorcolumn = true
   elseif (not cl) and cc then
     -- V → None
-    vim.wo[0].cursorline = false
-    vim.wo[0].cursorcolumn = false
+    vim.wo.cursorline = false
+    vim.wo.cursorcolumn = false
   else
     -- None → H+V
-    vim.wo[0].cursorline = true
-    vim.wo[0].cursorcolumn = true
+    vim.wo.cursorline = true
+    vim.wo.cursorcolumn = true
   end
 end
 

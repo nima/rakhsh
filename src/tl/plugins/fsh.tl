@@ -1,7 +1,6 @@
 local t = require("types")
 local R = t.roles.Roles
 local T = t.tags.Tags
-global vim: t.vim.Vim
 
 local OnEvents = t.plugins.KeymapEvents
 local type PluginSpec = t.plugins.PluginSpec

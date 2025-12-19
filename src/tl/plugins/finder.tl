@@ -1,8 +1,6 @@
 local t = require("types")
 local keymaps = require("core.keymaps")
 
-global vim: t.vim.Vim
-
 local On = t.plugins.KeymapEvents
 
 local type R = t.roles.Roles

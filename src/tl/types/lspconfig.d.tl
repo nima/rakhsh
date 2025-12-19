@@ -1,0 +1,1 @@
+../../../extern/teal-types/types/neovim/lspconfig.d.tl

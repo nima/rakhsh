@@ -2,8 +2,6 @@ local t = require("types")
 local R = t.roles.Roles
 local T = t.tags.Tags
 
-global vim: t.vim.Vim
-
 local OnEvents = t.plugins.KeymapEvents
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
@@ -38,30 +36,38 @@ function M.lazy(): {PluginSpec}
 end
 
 function M.init(): nil
-  local aug = vim.api.nvim_create_augroup("rakhsh_terminal", { clear = true })
+  local GROUP_NAME = "rakhsh_terminal"
+  vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
+
+  local function buf_setopt(buf: integer, name: string, value: any): nil
+    local opts = {} as { string: any }
+    opts["buf"] = buf
+    vim.api.nvim_set_option_value(name, value, opts)
+  end
 
   vim.api.nvim_create_autocmd("TermOpen", {
-    group = aug,
-    callback = (function(ev: { string: any })
+    group = GROUP_NAME,
+    callback = function(ev: vim.AutocmdCallbackData): any
       local buf = ev.buf as integer
-      vim.bo[buf].bufhidden = "hide"
-      vim.bo[buf].modifiable = false
+      buf_setopt(buf, "bufhidden", "hide")
+      buf_setopt(buf, "modifiable", false)
+
       vim.cmd.setlocal("nospell")
       vim.cmd.setlocal("nobuflisted")
       vim.cmd.setlocal("nonumber norelativenumber")
 
       vim.api.nvim_create_autocmd("TermClose", {
-        group = aug,
+        group = GROUP_NAME,
         buffer = buf,
         nested = true,
         once = true,
-        callback = function(): nil
+        callback = function(_: vim.AutocmdCallbackData): any
           if vim.api.nvim_buf_is_valid(buf) then
             vim.api.nvim_buf_delete(buf, { force = true })
           end
         end,
       })
-    end) as t.vim.VimCallback,
+    end,
   })
 end
 
