@@ -228,6 +228,7 @@ dependencies: caches installed outdated
 	@#= on every run of an already-installed formula.
 	@$(call luarocks-install,tl)
 	@$(call luarocks-install,cyan)
+	@$(call luarocks-install,teal-language-server)
 	@$(call brew-install,lua-language-server)     #+ Lua LSP
 	@#= Go
 	@$(call brew-install,go)
