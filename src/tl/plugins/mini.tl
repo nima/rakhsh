@@ -5,8 +5,6 @@ local T = t.tags.Tags
 local OnEvents = t.plugins.KeymapEvents
 ]]
 
-global vim: t.vim.Vim
-
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 

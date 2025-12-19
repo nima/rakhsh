@@ -1,5 +1,7 @@
 require("core.rakhsh")
-require("core.options")
+
+local options = require("core.options")
+options.init()
 
 local hotkeys = require("core.hotkeys")
 hotkeys.init()

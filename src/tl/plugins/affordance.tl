@@ -1,8 +1,6 @@
 local t = require("types")
 local cfg = require("core.config")
 
-global vim: t.vim.Vim
-
 --------------------------------------------------------------------------------
 
 local record ColorizerOpts
@@ -92,10 +90,11 @@ function M.lazy(): {PluginSpec}
 
       --+ Register via UIEnter hook so headless server startup still gets theme
       --+ once UI attaches...
-      local aug = vim.api.nvim_create_augroup("rakhsh_colorscheme", { clear = true })
+      local GROUP_NAME = "rakhsh_colorscheme"
+      vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
       vim.api.nvim_create_autocmd("UIEnter", {
-        group = aug,
-        callback = function()
+        group = GROUP_NAME,
+        callback = function(_: vim.AutocmdCallbackData): any
           if #vim.api.nvim_list_uis() == 0 then return end
           apply_once()
         end,

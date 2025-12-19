@@ -1,9 +1,23 @@
 local t = require("types")
 local hotkeys = require("core.hotkeys")
 
+-- Vim types are provided externally (extern/teal-types). We keep minimal boundary records here
+-- for maparg/buf_get_keymap payloads and keymap.set opts.
+
+local type VimMapOpts = vim.keymap.SetOpts
+
+local record VimRawMapInfo
+  lhs: string | nil
+  rhs: string | nil
+  desc: string | nil
+  callback: any
+  script: string | nil
+  lnum: integer | nil
+end
+
 --= Types -={ 
 local record RakhshMapOpts
-  vim_opts: t.vim.VimMapOpts
+  vim_opts: VimMapOpts
   tags: {t.tags.Tag}
 end
 
@@ -14,8 +28,6 @@ local record TelescopeEntry
   ordinal: string
 end
 
-global vim: t.vim.Vim
-
 local record KeymapModule
   Roles: {string : t.roles.Role}
   Tags:  {string : t.tags.Tag}
@@ -23,7 +35,7 @@ local record KeymapModule
     mode: string,
     role: t.roles.Role,
     key: string,
-    rhs: any,
+    rhs: string | function(...: any): any,
     opts: RakhshMapOpts
   ): nil
 
@@ -45,7 +57,7 @@ local record KeymapModule
     mode: string,
     role: t.roles.Role,
     key: string,
-    rhs: any,
+    rhs: string | function(...: any): any,
     opts: RakhshMapOpts
   ): nil
 
@@ -108,6 +120,7 @@ local function mklhs(mode: string, role: t.roles.Role, key: string): string
   return leader .. key
 end
 
+--! TODO: Deprecate decode_lhs; pass in role directly
 local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
   -- We derive decode rules from Roles[*].leader. `mode` is only used for error messages.
   local best_role: t.roles.Role | nil = nil
@@ -162,7 +175,7 @@ local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
   return best_role, best_tail
 end
 
-local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean
+local function same_rhs(info: VimRawMapInfo, rhs: string | function(...: any): any): boolean
   if type(rhs) == "string" then
     return info.rhs == rhs
   elseif type(rhs) == "function" and type(info.callback) == "function" then
@@ -177,10 +190,10 @@ local function same_rhs(info: t.vim.VimRawMapInfo, rhs: any): boolean
   return false
 end
 
-local function collisions(_existing: t.vim.VimRawMapInfo | nil, mode: string, lhs: string, rhs: any, desc: string): nil
+local function collisions(_existing: VimRawMapInfo | nil, mode: string, lhs: string, rhs: string | function(...: any): any, desc: string): nil
   if _existing == nil then return end
 
-  local existing = _existing as t.vim.VimRawMapInfo
+  local existing = _existing as VimRawMapInfo
   if existing.desc == desc then return end
   if existing.lhs == nil then return end
 
@@ -208,8 +221,8 @@ local function collisions(_existing: t.vim.VimRawMapInfo | nil, mode: string, lh
   ))
 end
 
-local function find_buf_map(bufnr: integer, mode: string, lhs: string, fallback?: boolean): t.vim.VimRawMapInfo | nil
-  local maps = (vim.api.nvim_buf_get_keymap(bufnr, mode) as {t.vim.VimRawMapInfo})
+local function find_buf_map(bufnr: integer, mode: string, lhs: string, fallback?: boolean): VimRawMapInfo | nil
+  local maps = (vim.api.nvim_buf_get_keymap(bufnr, mode) as {VimRawMapInfo})
   for _, info in ipairs(maps) do
     if info.lhs == lhs then return info end
   end
@@ -219,7 +232,7 @@ local function find_buf_map(bufnr: integer, mode: string, lhs: string, fallback?
   local any = vim.fn.maparg(lhs, mode, false, true)
   if any == nil then return nil end
 
-  local e = any as t.vim.VimRawMapInfo
+  local e = any as VimRawMapInfo
   if e.lhs ~= nil then return e end
 end
 -- }=-
@@ -234,13 +247,13 @@ function M.safemap(
   mode: string,
   role: t.roles.Role,
   key: string,
-  rhs: any,
+  rhs: string | function(...: any): any,
   opts: RakhshMapOpts
 ): nil
   local lhs = mklhs(mode, role, key)
 
   local vim_opts = opts.vim_opts
-  local existing = vim.fn.maparg(lhs, mode, false, true) as t.vim.VimRawMapInfo
+  local existing = vim.fn.maparg(lhs, mode, false, true) as VimRawMapInfo
   collisions(existing, mode, lhs, rhs, vim_opts.desc or "")
 
   vim.keymap.set(mode, lhs, rhs, vim_opts)
@@ -271,20 +284,21 @@ function M.docmap(
 ): nil
   -- Existing (global) mapping may or may not exist at registration time.
   local existing_any = vim.fn.maparg(lhs, mode, false, true)
-  local existing: t.vim.VimRawMapInfo | nil = nil
+  local existing: VimRawMapInfo | nil = nil
   if existing_any ~= nil then
-    local e = existing_any as t.vim.VimRawMapInfo
+    local e = existing_any as VimRawMapInfo
     if e.lhs ~= nil then
       existing = e
     end
   end
 
+  --! TODO: Deprecate decode_lhs; pass in role directly
   local role, tail = decode_lhs(mode, lhs)
 
   local rhs_str: string = "?"
   local existing_desc: string = ""
   if existing ~= nil then
-    local e = existing as t.vim.VimRawMapInfo
+    local e = existing as VimRawMapInfo
     if e.callback ~= nil then
       rhs_str = "<lua>"
     else
@@ -310,17 +324,24 @@ function M.safemap_buf(
   mode: string,
   role: t.roles.Role,
   key: string,
-  rhs: any,
+  rhs: string | function(...: any): any,
   opts: RakhshMapOpts
 ): nil
   local lhs = mklhs(mode, role, key)
 
   local vim_opts = opts.vim_opts
-  local existing: t.vim.VimRawMapInfo | nil = find_buf_map(bufnr, mode, lhs)
+  local existing: VimRawMapInfo | nil = find_buf_map(bufnr, mode, lhs)
   collisions(existing, mode, lhs, rhs, vim_opts.desc or "")
 
-  local merged = vim.tbl_extend("force", vim_opts as {string : any}, { buffer = bufnr } as {string : any})
-  vim.keymap.set(mode, lhs, rhs, merged as t.vim.VimMapOpts)
+  local merged: VimMapOpts = {
+    desc   = vim_opts.desc,
+    silent = vim_opts.silent,
+    remap  = vim_opts.remap,
+    nowait = vim_opts.nowait,
+    expr   = vim_opts.expr,
+    buffer = bufnr,
+  }
+  vim.keymap.set(mode, lhs, rhs, merged)
 
   local rhs_str: string
   if type(rhs) == "string" then
@@ -335,7 +356,7 @@ function M.safemap_buf(
     key = key,
     internal = true,
     rhs = rhs_str,
-    desc = (merged as t.vim.VimMapOpts).desc,
+    desc = merged.desc,
     tags = t.roles.complete(role, opts.tags, false),
     group = nil,
   } as hotkeys.RakhshKeymap, bufnr)
@@ -352,12 +373,13 @@ function M.docmap_buf(
   -- back to maparg (by setting fallback to true).
   local existing = find_buf_map(bufnr, mode, lhs, true)
 
+  --! TODO: Deprecate decode_lhs; pass in role directly
   local role, tail = decode_lhs(mode, lhs)
 
   local rhs_str: string = "?"
   local existing_desc: string = ""
   if existing ~= nil then
-    local e = existing as t.vim.VimRawMapInfo
+    local e = existing as VimRawMapInfo
     if e.callback ~= nil then
       rhs_str = "<lua>"
     else
@@ -383,10 +405,10 @@ function M.opts(desc: string, tags: {t.tags.Tag}): RakhshMapOpts
     error("opts: tags must be non-empty")
   end
 
-  local vim_opts: t.vim.VimMapOpts = {
-    noremap = true,
+  local vim_opts: VimMapOpts = {
     silent  = true,
     desc    = desc,
+    remap   = false,
   }
 
   local out: RakhshMapOpts = {
@@ -419,7 +441,7 @@ function M.make_entry(keymap: hotkeys.RakhshKeymap): TelescopeEntry
     display = string.format("%s  %s", lhs, desc),
     -- Search should match key sequence, description, rhs/command, and tags.
     ordinal = table.concat({ lhs, desc, rhs, tags_str }, " "),
-  } as TelescopeEntry
+  }
 end
 
 return M

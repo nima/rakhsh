@@ -2,8 +2,6 @@ local t = require("types")
 local R = t.roles.Roles
 local T = t.tags.Tags
 
-global vim: t.vim.Vim
-
 local OnEvents = t.plugins.KeymapEvents
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
@@ -52,7 +50,8 @@ local function update_cursorword(): nil
     return
   end
 
-  local ok, word = pcall(vim.fn.expand, "<cword>")
+  local ok, word_any = pcall(vim.fn.expand, "<cword>")
+  local word = word_any as string
   if not ok or word == nil or word == "" then
     --+ no word under cursor → keep existing highlight instead of killing it
     return
@@ -63,8 +62,9 @@ local function update_cursorword(): nil
 
   clear_cursorword()
 
-  local pat = "\\V\\<" .. vim.fn.escape(word, "\\") .. "\\>"
-  cursorword_match_id = vim.fn.matchadd("RakhshCursorWord", pat, 10, -1)
+  local esc = (vim.fn.escape(word, "\\") as string)
+  local pat = "\\V\\<" .. esc .. "\\>"
+  cursorword_match_id = (vim.fn.matchadd("RakhshCursorWord", pat, 10, -1) as integer)
 end
 
 local function toggle_cursorword(): nil
@@ -99,7 +99,8 @@ function M.lazy(): {PluginSpec}
 end
 
 function M.init(): nil
-  local aug = vim.api.nvim_create_augroup("rakhsh_cursorword", { clear = true })
+  local GROUP_NAME = "rakhsh_cursorword"
+  vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
 
   local function apply(): nil
     -- Colorscheme/UI churn clears highlight groups; run after tick to win.
@@ -111,13 +112,13 @@ function M.init(): nil
 
   -- Re-apply after any colorscheme change
   vim.api.nvim_create_autocmd("ColorScheme", {
-    group = aug,
+    group = GROUP_NAME,
     callback = apply,
   })
 
   -- Ensure we also win once UI is ready
   vim.api.nvim_create_autocmd("UIEnter", {
-    group = aug,
+    group = GROUP_NAME,
     once = true,
     callback = apply,
   })

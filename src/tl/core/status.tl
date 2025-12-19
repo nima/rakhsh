@@ -1,6 +1,3 @@
-local t = require("types")
-global vim: t.vim.Vim
-
 local record M
   status_summary: function(): string
 end

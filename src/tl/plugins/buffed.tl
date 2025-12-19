@@ -3,17 +3,15 @@ local T = t.tags.Tags
 local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
-global vim: t.vim.Vim
-
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
 local record BufferlineModule
-  setup: function(config: { string: any }): nil
+  setup: function(config: any): nil
 end
 
 local record BufferinModule
-  setup: function(config: { string: any }): nil
+  setup: function(config: any): nil
 end
 
 local M: t.plugins.PluginModule = {}
@@ -57,7 +55,7 @@ function M.lazy(): {PluginSpec}
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function(): nil
       --+ bufferline needs termguicolors (must be set before setup())
-      vim.opt.termguicolors = true
+      vim.o.termguicolors = true
 
       local cfg = {
         options = {
@@ -79,17 +77,20 @@ function M.lazy(): {PluginSpec}
 
         local ok2, err = pcall((bufferline as BufferlineModule).setup, cfg)
         if not ok2 then
-          vim.notify("[bufferline] setup failed: " .. tostring(err), vim.log.levels.ERROR)
+          vim.notify("[bufferline] setup failed: " .. tostring(err), vim.log.levels.ERROR, {})
         end
       end
-      local function apply() vim.schedule(_apply) end
+      local function apply(_: vim.AutocmdCallbackData): any
+        vim.schedule(_apply)
+      end
 
-      local aug = vim.api.nvim_create_augroup("rx_bufferline", { clear = true })
-      vim.api.nvim_create_autocmd("ColorScheme", { group = aug, callback = apply })
+      local GROUP_NAME = "rx_bufferline"
+      vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
+      vim.api.nvim_create_autocmd("ColorScheme", { group = GROUP_NAME, callback = apply })
 
       --+ Run once when UI is ready so bufferline wins over late startup mutations.
       vim.api.nvim_create_autocmd("UIEnter", {
-        group = aug,
+        group = GROUP_NAME,
         once = true,
         callback = apply,
       })
@@ -102,7 +103,7 @@ function M.lazy(): {PluginSpec}
     config = function(): nil
       local _mod = "bufferin"
       local bufferin = (require(_mod) as BufferinModule)
-      bufferin.setup({ show_window_layout = true })
+      bufferin.setup({ options = { show_window_layout = true } })
     end,
   } as PluginSpec)
 

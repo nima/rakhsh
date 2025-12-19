@@ -4,8 +4,8 @@ local R = t.roles.Roles
 local T = t.tags.Tags
 local OnEvents = t.plugins.KeymapEvents
 
-global vim: t.vim.Vim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+
+local lazypath = (vim.fn.stdpath("data") as string) .. "/lazy/lazy.nvim"
 
 local type PluginSpec = t.plugins.PluginSpec
 
@@ -55,10 +55,11 @@ local function RakhshLazyInstall(): nil
   vim.api.nvim_create_autocmd("User", {
     once = true,
     pattern = { "LazyInstall", "LazySync", "LazyDone" },
-    callback = function(_ev)
+    callback = function(_ev: any): any
       vim.schedule(function()
         vim.api.nvim_command("qa")
       end)
+      return nil
     end,
   })
 
@@ -99,7 +100,8 @@ local function apply_plugin_attach_keymaps_impl(modname: string, bufnr: integer)
   for _, km in ipairs(keymapspecs) do
     if km.on == OnEvents.Attach then
       validate_plugin_keymap(("%s (attach)"):format(modname), km)
-      keymaps.safemap_buf(bufnr, km.mode, km.role, km.key, km.rhs, keymaps.opts(km.desc, km.tags as {t.tags.Tag}))
+      local rhs = km.rhs as (string | function(...: any): any)
+      keymaps.safemap_buf(bufnr, km.mode, km.role, km.key, rhs, keymaps.opts(km.desc, km.tags as {t.tags.Tag}))
     end
   end
 end
@@ -114,7 +116,8 @@ local function apply_plugin_keymaps_impl(plugin_name: string): nil
 
     if km.on == nil or km.on == OnEvents.Immediate then
       local opts = keymaps.opts(km.desc, km.tags as {t.tags.Tag})
-      local ok, err = pcall(keymaps.safemap, km.mode, km.role, km.key, km.rhs, opts)
+      local rhs = km.rhs as (string | function(...: any): any)
+      local ok, err = pcall(keymaps.safemap, km.mode, km.role, km.key, rhs, opts)
       if not ok then
         error(("apply_plugin_keymaps[%s]: failed to install %s (%s): %s"):format(plugin_name, km.key, km.desc, tostring(err)), 2)
       end
@@ -190,12 +193,13 @@ function M.ensure_initialized(): nil
 
   vim.api.nvim_create_autocmd("UIEnter", {
     once = true,
-    callback = function()
+    callback = function(_: any): any
       --+ if lazy.nvim already exists, then M.init already called setup_lazy(false)
-      if has_lazy() then return end
+      if has_lazy() then return nil end
 
       --+ if not, lazy not installed yet → run installer: Lazy's UI
       RakhshLazyInstall()
+      return nil
     end,
   })
 

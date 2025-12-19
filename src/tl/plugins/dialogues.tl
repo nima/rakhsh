@@ -3,8 +3,6 @@ local T = t.tags.Tags
 local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 
-global vim: t.vim.Vim
-
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
@@ -34,7 +32,7 @@ local function open_popup_for_buffer(buf: integer)
 
   -- Scroll mappings: make j/k and arrows scroll the window instead of moving cursor
   local function map_scroll(lhs: string, rhs: string)
-    vim.keymap.set("n", lhs, rhs, { buffer = buf, nowait = true, silent = true, noremap = true })
+    vim.keymap.set("n", lhs, rhs, { buffer = buf, nowait = true, silent = true, remap = false })
   end
 
   map_scroll("j", "<C-e>")
@@ -84,7 +82,7 @@ function M.init(): nil
 end
 
 function M.open_popup_with_file(path: string): nil
-  local full = vim.fn.fnamemodify(path, ":p")  -- resolve relative → absolute
+  local full = (vim.fn.fnamemodify(path, ":p") as string)  -- resolve relative → absolute
   local ok, lines_any = pcall(vim.fn.readfile, full)
   if not ok then
     vim.notify("[rakhsh/ui] readfile failed for: " .. full, vim.log.levels.ERROR, nil)
@@ -101,13 +99,13 @@ function M.open_popup_with_cmd(cmd: string): nil
     return
   end
 
-  local out = res.output or ""
+  local out = (res.output as string) or ""
   if out == "" then
     vim.notify("[rakhsh/ui] no output for: " .. cmd, vim.log.levels.INFO, nil)
     return
   end
 
-  local lines_any = vim.split(out, "\n", { plain = true })
+  local lines_any = vim.split(out, "\n", true)
   open_popup_with_lines(lines_any as {string})
 end
 
@@ -117,7 +115,7 @@ function M.open_popup_with_cmd_sandboxed(cmd: string): nil
   local orig_tab = api.nvim_get_current_tabpage()
 
   -- open temp tab (new empty buffer becomes current)
-  vim.cmd.tabnew()
+  vim.cmd("tabnew")
 
   -- try running the command; it may change windows/buffers inside this tab
   local _ok = pcall(vim.api.nvim_command, cmd)
@@ -126,7 +124,7 @@ function M.open_popup_with_cmd_sandboxed(cmd: string): nil
   local buf = api.nvim_get_current_buf()
 
   -- close the temp tab, return to original
-  vim.cmd.tabclose()
+  vim.cmd("tabclose")
   api.nvim_set_current_tabpage(orig_tab)
 
   -- open a popup on the same buffer to preserve highlights/colors

@@ -1,7 +1,3 @@
-local t = require("types")
-
-global vim: t.vim.Vim
-
 local NS_MARKERS = "louder.markers"
 local NS_TAGS    = "louder.tags"
 
@@ -28,7 +24,8 @@ local function ns_tags_id(): integer
   return vim.api.nvim_create_namespace(NS_TAGS)
 end
 
-local group = vim.api.nvim_create_augroup("louder", { clear = true })
+local GROUP_NAME = "louder"
+vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
 
 --------------------------------------------------------------------------------
 --= Private Interface -=[
@@ -69,7 +66,7 @@ local function redefine_comment_tag_highlights(): nil
 end
 
 local function get_comment_leader(buf: integer): (string | nil)
-  local cs = (vim.bo[buf].commentstring or "") as string
+  local cs = (vim.api.nvim_get_option_value("commentstring", { buf = buf }) or "") as string
   if cs == "" or not cs:find("%%s") then return nil end
 
   local leader = cs:match("^%s*(.-)%s*%%s")
@@ -135,7 +132,7 @@ local function apply_markers(buf: integer): nil
   local ns_markers = ns_markers_id()
 
   if not vim.api.nvim_buf_is_valid(buf) then return end
-  if vim.api.nvim_buf_get_option(buf, "buftype") ~= "" then return end
+  if (vim.api.nvim_get_option_value("buftype", { buf = buf }) as string) ~= "" then return end
 
   local leader = get_comment_leader(buf)
   if leader == nil then return end
@@ -195,7 +192,7 @@ function M.setup(): nil
   M._ns_tags = ns_tags_id()
 
   vim.api.nvim_create_autocmd({ "ColorScheme" }, {
-    group = group,
+    group = GROUP_NAME,
     pattern = "*",
     callback = function(): nil
       --+ ColorScheme resets highlight groups. Re-define them once...
@@ -206,7 +203,7 @@ function M.setup(): nil
       for _, buf in ipairs(vim.api.nvim_list_bufs()) do
         if not vim.api.nvim_buf_is_valid(buf) then goto continue end
         if not vim.api.nvim_buf_is_loaded(buf) then goto continue end
-        if vim.api.nvim_buf_get_option(buf, "buftype") ~= "" then goto continue end
+        if (vim.api.nvim_get_option_value("buftype", { buf = buf }) as string) ~= "" then goto continue end
 
         apply_markers(buf)
         apply_comment_tag_extmarks(buf)
@@ -217,9 +214,9 @@ function M.setup(): nil
   })
 
   vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "TextChanged", "TextChangedI" }, {
-    group = group,
+    group = GROUP_NAME,
     pattern = "*",
-    callback = function(ev: t.vim.VimAutocmdEvent)
+    callback = function(ev: vim.AutocmdCallbackData): any
       apply_markers(ev.buf)
       apply_comment_tag_extmarks(ev.buf)
     end,

@@ -2,7 +2,6 @@ local t = require("types")
 local plugins = require("core.plugins")
 local T = t.tags.Tags
 local R = t.roles.Roles
-global vim: t.vim.Vim
 
 local M: t.plugins.PluginModule = {}
 

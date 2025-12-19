@@ -4,19 +4,37 @@ local R = t.roles.Roles
 local On = t.plugins.KeymapEvents
 local d = require("plugins.dialogues")
 
-global vim: t.vim.Vim
-
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
+-- Minimal TreeSitter typing shim (extern neovim types do not expose `vim.treesitter`).
+local record TsLanguage
+  get_lang: function(ft: string): string
+end
+
+local record Ts
+  language: TsLanguage
+end
+
+local function ts(): Ts
+  -- Single boundary cast: extern `vim` type doesn't include `treesitter`.
+  -- Use string-key indexing so Teal doesn't require a structural type for `vim`.
+  local v = (vim as { string: any })
+  return (v["treesitter"] as Ts)
+end
+
 local function install_here()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local ft = vim.bo[bufnr].filetype
+  local bufnr = (vim.api.nvim_get_current_buf() as integer)
+  local ft = (vim.api.nvim_get_option_value("filetype", ({ buf = bufnr } as vim.GetOptionValueOpts)) as string)
   if ft == nil or ft == "" then return end
 
   -- Map filetype to treesitter language (handles aliases like javascriptreact -> tsx)
-  local ok, lang = pcall(vim.treesitter.language.get_lang, ft)
-  if not ok or lang == nil or lang == "" then return end
+  local ok, lang_any = pcall(function(): any
+    return ts().language.get_lang(ft)
+  end)
+  if not ok then return end
+  local lang = (lang_any as string)
+  if lang == "" then return end
 
   -- Invoke the user-facing TSInstall command for this language
   ok = pcall(vim.api.nvim_command, "TSInstall " .. lang)

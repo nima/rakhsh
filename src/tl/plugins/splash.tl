@@ -1,14 +1,12 @@
 local t = require("types")
 
-global vim: t.vim.Vim
-
 --------------------------------------------------------------------------------
 --= Private Interface -={
 local function get_ui_size(): (integer, integer)
   --+ In remote-ui flows, window sizing can be wrong until a UI attaches.
   --+ vim.o.columns/lines reflect the attached UI grid size.
-  local width = vim.o.columns
-  local height = vim.o.lines
+  local width = (vim.o.columns as integer)
+  local height = (vim.o.lines as integer)
   return width, height
 end
 
@@ -28,7 +26,7 @@ local function center_lines(lines: {string}, width: integer, height: integer): {
 
   --+ horizontal centering (use display width, not byte length)
   for _, l in ipairs(lines) do
-    local lw = vim.fn.strdisplaywidth(l)
+    local lw = (vim.fn.strdisplaywidth(l) as integer)
     local pad = 0
     if lw < width then
       pad = math.floor((width - lw) / 2)
@@ -39,45 +37,71 @@ local function center_lines(lines: {string}, width: integer, height: integer): {
   return padded
 end
 
+local function buf_setopt(buf: integer, name: string, value: any): nil
+  local opts = {} as { string: any }
+  opts["buf"] = buf
+  vim.api.nvim_set_option_value(name, value, opts)
+end
+
+local function buf_getopt(buf: integer, name: string): any
+  local opts = ({ buf = buf } as vim.GetOptionValueOpts)
+  return vim.api.nvim_get_option_value(name, opts)
+end
+
+local function win_setopt(win: integer, name: string, value: any): nil
+  local opts = {} as { string: any }
+  opts["win"] = win
+  vim.api.nvim_set_option_value(name, value, opts)
+end
+
+local function buf_var_set(buf: integer, name: string, value: any): nil
+  pcall(vim.api.nvim_buf_set_var, buf, name, value)
+end
+
+local function buf_var_get_bool(buf: integer, name: string): boolean
+  local ok, v = pcall(vim.api.nvim_buf_get_var, buf, name)
+  return ok and v == true
+end
+
 local function setup_splash_buffer(buf: integer): nil
-  vim.bo[buf].buftype    = "nofile"
-  vim.bo[buf].bufhidden  = "wipe"
-  vim.bo[buf].swapfile   = false
-  vim.bo[buf].modifiable = true
-  vim.bo[buf].readonly   = false
-  vim.bo[buf].filetype   = "rakhsh-splash"
+  buf_setopt(buf, "buftype", "nofile")
+  buf_setopt(buf, "bufhidden", "wipe")
+  buf_setopt(buf, "swapfile", false)
+  buf_setopt(buf, "modifiable", true)
+  buf_setopt(buf, "readonly", false)
+  buf_setopt(buf, "filetype", "rakhsh-splash")
 end
 
 local function setup_splash_window(win: integer): nil
-  vim.wo[win].number         = false
-  vim.wo[win].relativenumber = false
-  vim.wo[win].signcolumn     = "no"
-  vim.wo[win].foldcolumn     = "0"
-  vim.wo[win].list           = false
-  vim.wo[win].cursorline     = false
-  vim.wo[win].fillchars      = "eob: "
+  win_setopt(win, "number", false)
+  win_setopt(win, "relativenumber", false)
+  win_setopt(win, "signcolumn", "no")
+  win_setopt(win, "foldcolumn", "0")
+  win_setopt(win, "list", false)
+  win_setopt(win, "cursorline", false)
+  win_setopt(win, "fillchars", "eob: ")
 end
 
 local function setup_splash_exit_on_insert(buf: integer): nil
-  vim.b[buf].rakhsh_splash_armed = false
+  buf_var_set(buf, "rakhsh_splash_armed", false)
   vim.api.nvim_create_autocmd("InsertEnter", {
     buffer = buf,
     once = true,
-    callback = function()
+    callback = function(_: vim.AutocmdCallbackData): any
       if not vim.api.nvim_buf_is_valid(buf) then return end
 
       -- turn this into a normal empty buffer and let the user start typing
             -- Disarm ASAP so CursorMoved handler stops fighting.
-      vim.b[buf].rakhsh_splash_armed = false
+      buf_var_set(buf, "rakhsh_splash_armed", false)
 
       -- Make sure we're operating in the window that actually shows the splash.
-      local winid = vim.fn.bufwinid(buf)
+      local winid = (vim.fn.bufwinid(buf) as integer)
       if winid ~= -1 then
         vim.api.nvim_set_current_win(winid)
       end
 
       -- Replace splash with a fresh empty buffer, then wipe the splash buffer.
-      vim.cmd.enew()
+      vim.cmd("enew")
       if vim.api.nvim_buf_is_valid(buf) then
         pcall(vim.api.nvim_buf_delete, buf, { force = true })
       end
@@ -88,7 +112,7 @@ local function setup_splash_exit_on_insert(buf: integer): nil
     buffer = buf,
     callback = function(): nil
       if not vim.api.nvim_buf_is_valid(buf) then return end
-      if vim.b[buf].rakhsh_splash_armed ~= true then return end
+      if not buf_var_get_bool(buf, "rakhsh_splash_armed") then return end
 
       -- If this buffer is no longer in the current window, don't fight other windows.
       local win = vim.api.nvim_get_current_win()
@@ -102,13 +126,13 @@ end
 
 local function setup_splash_keymaps(buf: integer): nil
   --+ Quit the splash buffer with 'q'; no need for safemap here.
-  vim.keymap.set("n", "q", "<cmd>bd!<CR>", { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "q", "<cmd>bd!<CR>", ({ buffer = buf, nowait = true, silent = true } as vim.keymap.SetOpts))
 end
 
 local function read_splash_lines(): {string}
   local candidates = {
-    vim.fn.stdpath("config") .. "/splash.txt",
-    vim.fn.stdpath("data") .. "/splash.txt",
+    (vim.fn.stdpath("config") as string) .. "/splash.txt",
+    (vim.fn.stdpath("data") as string) .. "/splash.txt",
   }
 
   for _, path in ipairs(candidates) do
@@ -126,13 +150,13 @@ end
 
 local function should_show_splash_now(buf: integer): boolean
   --+ Guard at time-of-use: startup state can change between M.setup() and UIEnter.
-  if vim.fn.argc() > 0 then return false end
+  if (vim.fn.argc() as integer) > 0 then return false end
 
   -- If already visiting a named file, never show the splash.
   local name = vim.api.nvim_buf_get_name(buf)
   if name ~= "" then return false end
 
-  if vim.bo[buf].buftype ~= "" then return false end
+  if (buf_getopt(buf, "buftype") as string) ~= "" then return false end
 
   local line_count = vim.api.nvim_buf_line_count(buf)
   if line_count == 0 then return true end
@@ -145,8 +169,8 @@ end
 
 local function any_real_file_buffer_exists(): boolean
   for _, b in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted then
-      if vim.bo[b].buftype == "" then
+    if vim.api.nvim_buf_is_valid(b) and (buf_getopt(b, "buflisted") as boolean) then
+      if (buf_getopt(b, "buftype") as string) == "" then
         local name = vim.api.nvim_buf_get_name(b)
         if name ~= "" then
           return true
@@ -176,15 +200,15 @@ local function show_rakhsh_splash(): nil
   local padded = center_lines(lines, width, height)
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, padded)
-  vim.bo[buf].modified = false
-  vim.bo[buf].modifiable = true
-  vim.bo[buf].readonly   = false
+  buf_setopt(buf, "modified", false)
+  buf_setopt(buf, "modifiable", true)
+  buf_setopt(buf, "readonly", false)
 
   setup_splash_exit_on_insert(buf)
   setup_splash_keymaps(buf)
   vim.schedule(function()
     if vim.api.nvim_buf_is_valid(buf) then
-      vim.b[buf].rakhsh_splash_armed = true
+      buf_var_set(buf, "rakhsh_splash_armed", true)
     end
   end)
 end
@@ -201,7 +225,7 @@ end
 
 function M.init(): nil
   --+ Only ever consider splash when no files were passed on the CLI.
-  if vim.fn.argc() ~= 0 then return end
+  if (vim.fn.argc() as integer) ~= 0 then return end
 
   local function show(): nil
     vim.schedule(function()
@@ -211,7 +235,8 @@ function M.init(): nil
 
   --+ If this module is loaded after the UI already attached (lazy-loading),
   --+ UIEnter already fired.  In that case, show immediately.
-  if #vim.api.nvim_list_uis() > 0 then
+  local uis = (vim.api.nvim_list_uis() as { any })
+  if #uis > 0 then
     show()
     return
   end
@@ -219,7 +244,9 @@ function M.init(): nil
   --+ Otherwise wait for a UI to attach so the final grid size is known for centering.
   vim.api.nvim_create_autocmd("UIEnter", {
     once = true,
-    callback = function() show() end,
+    callback = function(_: vim.AutocmdCallbackData): any
+      show()
+    end,
   })
 end
 

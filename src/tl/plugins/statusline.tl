@@ -1,24 +1,42 @@
 local t = require("types")
-global vim: t.vim.Vim
 
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
 
 local type LualineOpts = { string: any }
+
 local record Lualine
   setup: function(LualineOpts | nil): nil
   load_extension: function(string): nil
 end
 
+-- Minimal LSP typing shim for extern neovim types.
+-- (Extern `vim.d.tl` in teal-types does not currently expose all `vim.lsp.*` keys.)
+local record LspClient
+  name: string
+end
+
+local record LspUtil
+  get_progress_messages: function(): {any}
+end
+
+local record LspApi
+  get_clients: function({ string: any } | nil): {LspClient}
+  util: LspUtil
+end
+
+local function lsp(): LspApi
+  return (vim.lsp as LspApi)
+end
+
 local function lsp_name(): string
-  local vlspcf: t.vim.VimLSPClientFilter = { bufnr = 0 }
-  local clients = vim.lsp.get_clients(vlspcf)
+  local clients = lsp().get_clients({ bufnr = 0 })
   if not clients or #clients == 0 then return "" end
   return clients[1].name
 end
 
 local function lsp_status(): string
-  local ok, result = pcall(function(): {any} return vim.lsp.util.get_progress_messages() end)
+  local ok, result = pcall(function(): {any} return lsp().util.get_progress_messages() end)
   if not ok then return "" end
   local progress = (result or {}) as {any}
   if #progress == 0 then return "" end
@@ -27,9 +45,9 @@ end
 
 local function recording_status(): string
   --+ Show current recording macro/register if any (e.g. @q)
-  local rec = vim.fn.reg_recording()
+  local rec = (vim.fn.reg_recording() as string)
   if rec ~= "" then return "@" .. rec end
-  local exec = vim.fn.reg_executing()
+  local exec = (vim.fn.reg_executing() as string)
   if exec ~= "" then return "@" .. exec end
   return ""
 end

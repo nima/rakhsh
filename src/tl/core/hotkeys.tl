@@ -2,8 +2,6 @@ local t = require("types")
 local R = t.roles.Roles
 local T = t.tags.Tags
 
-global vim: t.vim.Vim
-
 --+ One entry per safemap-registered keymap
 local record RakhshKeymap
   mode: t.roles.Mode
@@ -107,7 +105,6 @@ function M.apply_initial_keymaps(): nil
     vim.keymap.set(m.mode, m.key, m.rhs, {
       desc = m.desc,
       silent = true,
-      noremap = true,
     })
     M.register(m)
   end
@@ -129,7 +126,7 @@ end
 
 function M.show_help(): nil
   if #registry == 0 then
-    vim.notify("No Rakhsh keymaps registered yet", vim.log.levels.INFO)
+    vim.notify("No Rakhsh keymaps registered yet", vim.log.levels.INFO, {})
     return
   end
 

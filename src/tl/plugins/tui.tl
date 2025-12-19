@@ -1,5 +1,4 @@
 local t = require("types")
-global vim: t.vim.Vim
 
 local type PluginSpec = t.plugins.PluginSpec
 local type PluginKeymap = t.plugins.PluginKeymap
