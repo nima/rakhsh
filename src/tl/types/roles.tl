@@ -48,6 +48,26 @@ local KbAtlas<total>: KbRegion = {
 --+ <Tab> == <C-i>
 --+ <Esc> == <C-[>
 
+local function leader(key: string): string
+  --+ Shift: F12 →  F24
+  --+ Ctrl:  F12 →  F36
+  --+ Alt:   F12 →  F60
+
+  local mod, num = key:match("^<([CSA])%-F(%d+)>$")
+  if not mod then return key end
+
+  local n: integer = math.floor(tonumber(num))
+  if not n then return key end
+
+  local offset: integer = 0
+  if     mod == "S" then offset = 12
+  elseif mod == "C" then offset = 24
+  elseif mod == "A" then offset = 48
+  else return key end
+
+  return string.format("<F%d>", n + offset)
+end
+
 local enum Mode
    "n" -- Normal
    "i" -- Insert
@@ -126,29 +146,30 @@ local record RoleData
 end
 
 local Roles<total>: RoleData = {
-  Naked     = { leader="",          region=KbAtlas.All, name="Naked", tag="r/naked", desc="These are not protected by any preceding keystrokes" },
-  Tradition = { leader="",          region=KbAtlas.All, name="Tradition", tag="r/trad", desc="Traditional muscle-memory vim keymaps" },
-  Power     = { leader="\\",        region=KbAtlas.All, name="PowerTool", tag="r/power", desc="Power moves to charm" },
-  TUI       = { leader="<Tab>",     region=KbAtlas.All, name="TextualUserInterface", tag="r/tui", desc="The Rakhsh IDE" },
-  Go        = { leader="g",         region=KbAtlas.All, name="NavigationGo", tag="r/go", desc="Immediate navigation: single-step jumps with no UI" },
-  GoVia     = { leader="<C-g>",     region=KbAtlas.All, name="NavigationVia", tag="r/go", desc="Navigation via an intermediate UI (pickers, lists, dialogs)" },
-  Window    = { leader="<C-w>",     region=KbAtlas.All, name="WindowManagement", tag="r/native/w", desc="TUI Window management" },
-  Toggle    = { leader="<Esc>",     region=KbAtlas.All, name="Toggle", tag="r/toggle", desc="It goes on... it goes off" },
-  Info      = { leader="<F2>",      region=KbAtlas.All, name="Information", tag="r/info", desc="" },
-  Select    = { leader="<A-*>",     region=KbAtlas.HomeRow, name="Select", tag="r/info", desc="TUI pane selection" },
-  View      = { leader="<S-*>",     region=KbAtlas.Function, name="View", tag="r/info", desc="View related" },
-  Edit      = { leader="<C-*>",     region=KbAtlas.All, name="Editor", tag="r/edit", desc="Editor commands" },
-  System    = { leader="<C-S-*>",   region=KbAtlas.All, name="System", tag="r/edit", desc="System related" },
-  Layout    = { leader="<A-S-*>",   region=KbAtlas.All, name="Layout", tag="r/edit", desc="Layout related" },
-  ForRent   = { leader="<C-A-*>",   region=KbAtlas.All, name="ThisSpaceForRent", tag="r/edit", desc="This space for rent" },
-  Rakhsh    = { leader="<C-A-S-*>", region=KbAtlas.All, name="RakhshIDE", tag="r/ide", desc="The Rakhsh IDE" },
-  AI        = { leader="<F5>",      region=KbAtlas.All, name="ArtificialIntelligence", tag="r/ai", desc="Anything involving AI or LLM API calls" },
-  SCM       = { leader="<F10>",     region=KbAtlas.All, name="SourceControlManagement", tag="r/git", desc="Anything related to Git" },
-  LSPGoto   = { leader="<F12>",     region=KbAtlas.All, name="LSPGoto", tag="r/lsp", desc="LSP goto" },
-  LSPInfo   = { leader="<C-F12>",   region=KbAtlas.All, name="LSPInfo", tag="r/lsp", desc="LSP inspection / info" },
-  LSPEdit   = { leader="<A-F12>",   region=KbAtlas.All, name="LSPEdit", tag="r/lsp", desc="LSP edits / refactors" },
-  LSPDiag   = { leader="<S-F12>",   region=KbAtlas.All, name="LSPDiagnostics", tag="r/lsp", desc="LSP diagnostics" },
+  Naked     = { leader=leader(""),          region=KbAtlas.All, name="Naked", tag="r/naked", desc="These are not protected by any preceding keystrokes" },
+  Tradition = { leader=leader(""),          region=KbAtlas.All, name="Tradition", tag="r/trad", desc="Traditional muscle-memory vim keymaps" },
+  Power     = { leader=leader("\\"),        region=KbAtlas.All, name="PowerTool", tag="r/power", desc="Power moves to charm" },
+  TUI       = { leader=leader("<Tab>"),     region=KbAtlas.All, name="TextualUserInterface", tag="r/tui", desc="The Rakhsh IDE" },
+  Go        = { leader=leader("g"),         region=KbAtlas.All, name="NavigationGo", tag="r/go", desc="Immediate navigation: single-step jumps with no UI" },
+  GoVia     = { leader=leader("<C-g>"),     region=KbAtlas.All, name="NavigationVia", tag="r/go", desc="Navigation via an intermediate UI (pickers, lists, dialogs)" },
+  Window    = { leader=leader("<C-w>"),     region=KbAtlas.All, name="WindowManagement", tag="r/native/w", desc="TUI Window management" },
+  Toggle    = { leader=leader("<Esc>"),     region=KbAtlas.All, name="Toggle", tag="r/toggle", desc="It goes on... it goes off" },
+  Info      = { leader=leader("<F2>"),      region=KbAtlas.All, name="Information", tag="r/info", desc="" },
+  Select    = { leader=leader("<A-*>"),     region=KbAtlas.HomeRow, name="Select", tag="r/info", desc="TUI pane selection" },
+  View      = { leader=leader("<S-*>"),     region=KbAtlas.Function, name="View", tag="r/info", desc="View related" },
+  Edit      = { leader=leader("<C-*>"),     region=KbAtlas.All, name="Editor", tag="r/edit", desc="Editor commands" },
+  System    = { leader=leader("<C-S-*>"),   region=KbAtlas.All, name="System", tag="r/edit", desc="System related" },
+  Layout    = { leader=leader("<A-S-*>"),   region=KbAtlas.All, name="Layout", tag="r/edit", desc="Layout related" },
+  ForRent   = { leader=leader("<C-A-*>"),   region=KbAtlas.All, name="ThisSpaceForRent", tag="r/edit", desc="This space for rent" },
+  Rakhsh    = { leader=leader("<C-A-S-*>"), region=KbAtlas.All, name="RakhshIDE", tag="r/ide", desc="The Rakhsh IDE" },
+  AI        = { leader=leader("<F5>"),      region=KbAtlas.All, name="ArtificialIntelligence", tag="r/ai", desc="Anything involving AI or LLM API calls" },
+  SCM       = { leader=leader("<F10>"),     region=KbAtlas.All, name="SourceControlManagement", tag="r/git", desc="Anything related to Git" },
+  LSPGoto   = { leader=leader("<F12>"),     region=KbAtlas.All, name="LSPGoto", tag="r/lsp", desc="LSP goto" },
+  LSPInfo   = { leader=leader("<S-F12>"),   region=KbAtlas.All, name="LSPInfo", tag="r/lsp", desc="LSP inspection / info" },
+  LSPEdit   = { leader=leader("<C-F12>"),   region=KbAtlas.All, name="LSPEdit", tag="r/lsp", desc="LSP edits / refactors" },
+  LSPDiag   = { leader=leader("<A-F12>"),   region=KbAtlas.All, name="LSPDiagnostics", tag="r/lsp", desc="LSP diagnostics" },
 }
+
 setmetatable(Roles, { 
   __newindex = function(_: RoleData, k: any, _: any) 
     error("Cannot add new value '" .. (k as string) .. "' to Roles") 

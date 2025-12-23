@@ -25,5 +25,6 @@ require("core.plugins").init({
   "plugins.dialogues",      -- Pop-up dialogues
   "plugins.terminal",       -- Terminal integration
   "plugins.affordance",     -- Affordance (themes, colors, icons)
+  "plugins.mutants",        -- Keymaps for editing (mini)
   "plugins.splash",         -- Splash screen
 })

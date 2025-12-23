@@ -68,14 +68,21 @@ local function format_buffer(...: any): any
   lsp.buf.format({ async = true })
 end
 
+local function act_on_buf(...: any): any
+  select('#', ...)
+  local lsp: VimLsp = vim.lsp as VimLsp
+  lsp.buf.code_action()
+end
+
 local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
   return {
-    { mode="n", role=R.GoVia,   key="i",  rhs="<cmd>Telescope lsp_incoming_calls<CR>", on=OnEvents.Attach, desc="[LSP] incoming calls",      tags={ T.ActionView, T.TargetBuffer    } },
-    { mode="n", role=R.GoVia,   key="o",  rhs="<cmd>Telescope lsp_outgoing_calls<CR>", on=OnEvents.Attach, desc="[LSP] outgoing calls",      tags={ T.ActionView, T.TargetBuffer    } },
+    { mode="n", role=R.LSPGoto, key="gi", rhs="<cmd>Telescope lsp_incoming_calls<CR>", on=OnEvents.Attach, desc="[LSP] incoming calls",      tags={ T.ActionView, T.TargetBuffer    } },
+    { mode="n", role=R.LSPGoto, key="go", rhs="<cmd>Telescope lsp_outgoing_calls<CR>", on=OnEvents.Attach, desc="[LSP] outgoing calls",      tags={ T.ActionView, T.TargetBuffer    } },
     { mode="n", role=R.LSPEdit, key="f",  rhs=format_buffer,                           on=OnEvents.Attach, desc="[LSP] format",              tags={ T.ActionEdit, T.TargetBuffer    } },
     { mode="n", role=R.Toggle,  key="D",  rhs=toggle_loclist,                          on=OnEvents.Attach, desc="[LSP] diagnostics loclist", tags={ T.ActionView, T.TargetWorkspace } },
+    { mode="x", role=R.LSPEdit, key="A",  rhs=act_on_buf,                              on=OnEvents.Attach, desc="[LSP] code actions",        tags={ T.ActionEdit, T.TargetBuffer    } },
   }
 end
 
