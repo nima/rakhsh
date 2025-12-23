@@ -38,7 +38,10 @@ function M.lazy(): {PluginSpec}
     name = "rx-louder",
     lazy = true,
     event = "VeryLazy",
-    dependencies = { "norcalli/nvim-colorizer.lua", "tanvirtin/monokai.nvim" },
+    dependencies = {
+      "norcalli/nvim-colorizer.lua",
+      "tanvirtin/monokai.nvim",
+    },
     config = function()
       require("rx_louder").setup()
     end

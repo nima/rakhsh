@@ -1,6 +1,4 @@
 local t = require("types")
-local R = t.roles.Roles
-local T = t.tags.Tags
 
 --+ One entry per safemap-registered keymap
 local record RakhshKeymap
@@ -78,12 +76,6 @@ end
 
 local type TelescopeMapFn = function(mode: t.roles.Mode, lhs: string, fn: function(integer): nil): nil
 
-local keymaps = {
-  { mode = "n", role = R.Naked, key = "<C-F5>", internal = true, rhs = "<Cmd>lua dofile(vim.fn.stdpath('config') .. '/init.lua')<CR>", desc = "Reload Rakhsh config", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-Space>", internal = true, rhs = "<Cmd>WhichKey<CR>", desc = "Show which-key menu", tags = { T.ActionView } },
-  { mode = "n", role = R.Naked, key = "<C-c>", internal = true, rhs = "<Cmd>:confirm bdelete<CR>", desc = "Quitall", tags = { T.ActionView } },
-}
-
 --------------------------------------------------------------------------------
 
 local record RakhshHotkeysCore
@@ -92,23 +84,9 @@ local record RakhshHotkeysCore
   register: function(RakhshKeymap): nil
   registry: function(): {RakhshKeymap}
   show_help: function(): nil
-  keymaps: {RakhshKeymap}
-  apply_initial_keymaps: function(): nil
 end
 
-local M: RakhshHotkeysCore = {
-  keymaps = keymaps,
-}
-
-function M.apply_initial_keymaps(): nil
-  for _, m in ipairs(keymaps) do
-    vim.keymap.set(m.mode, m.key, m.rhs, {
-      desc = m.desc,
-      silent = true,
-    })
-    M.register(m)
-  end
-end
+local M: RakhshHotkeysCore = {}
 
 local hl_inited = false
 local function ensure_hl(): nil
@@ -229,7 +207,6 @@ vim.api.nvim_create_user_command("RakhshKeys", function()
 end, {})
 
 function M.init(): nil
-  M.apply_initial_keymaps()
 end
 
 return M
