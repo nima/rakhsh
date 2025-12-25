@@ -20,26 +20,71 @@ STATE_DIR="$( "${NVIM}" --headless --clean --cmd 'lua io.stdout:write(vim.fn.std
 CACHE_DIR="$( "${NVIM}" --headless --clean --cmd 'lua io.stdout:write(vim.fn.stdpath("cache"))'  +qa)"
 
 session="${STATE_DIR}/it2sid"
-socket="${STATE_DIR}/server.pipe"
-export NVIM_LISTEN_ADDRESS="${socket}"
 : "${ITERM_SESSION_ID:=headless}"
 vscode="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
 
-mkdir -p "$(dirname "${socket}")"
+function :lca() {
+  [ $# -eq 0 ] && { pwd; return; }
+  [ $# -eq 1 ] && { realpath "$1"; return; }
+
+  local lca="$(realpath "${1}")"; shift
+  lca="${lca%/*}"
+
+  local path
+  for path in "$@"; do
+    path="$(realpath "${path}")"
+    while [[ "${path}/" != "${lca}/"* ]]; do
+      [ -z "$lca" ] && { lca="/"; break 2; }
+      lca="${lca%/*}"
+    done
+  done
+
+  [ -z "$lca" ] && echo "/" || echo "$lca"
+}
+
+function :mksocket() {
+  [[ "${NVIM_LISTEN_ADDRESSr:-DEAD}" == "DEAD" ]] || return
+
+  ROOT="/"
+  SOCKET="${STATE_DIR}/server.pipe"
+  local lca="$(:lca "$@")"
+  local ideid; ideid="$(shasum -a1 <<< "${lca}"|cut -c1-12)"
+
+  local _ideid
+  local _socket
+  while [[ "${lca}" != "/" ]]; do
+    _ideid="$(shasum -a1 <<< "${lca}"|cut -c1-12)"
+    _socket="${STATE_DIR}/server-${_ideid}.pipe"
+    _gitdir="${lca}/.git"
+    if [[ -S "${_socket}" ]] || [[ -d "${_gitdir}" ]]; then
+      SOCKET="${_socket}"
+      ROOT="${lca}"
+      break
+    fi
+
+    lca="$(dirname "${lca}")"
+  done
+
+  export ROOT
+  export SOCKET
+  export NVIM_LISTEN_ADDRESS="${SOCKET}"
+  mkdir -p "$(dirname "${SOCKET}")"
+  return 0
+}
 
 function :clean() {
   rm -f "${CACHE_DIR}/it2sid"
-  rm -f "${socket}"
+  rm -f "${SOCKET?}"
   pkill -9 -f "${NVIM}"
 }
 
 function :debug() {
   printf "#%079d\n" 0 | tr '0' '#'
-  echo "Sockets:"
-  [[ ! -S "${socket}" ]] || ls -l "${socket}"
+  echo "Socket:"
+  [[ ! -S "${SOCKET}" ]] || ls -l "${SOCKET}"
   printf "#%079d\n" 0 | tr '0' '-'
   echo "Processes:"
-  ps -ef|grep -wE 'n[v]im' || true
+  pgrep -f 'nvim' || true
   printf "#%079d\n" 0 | tr '0' '#'
 }
 
@@ -70,13 +115,13 @@ function :vsc() {
 }
 
 function :socket() {
-  [[ -S "${socket}" ]] && return 0 || return 1
+  [[ -S "${SOCKET}" ]] && return 0 || return 1
 }
 
 function :alive() {
   :socket || return $?
 
-  timeout 3.0 "${NVIM}" --headless --server "${socket}" --remote-expr 0 >/dev/null 2>&1 || return 2
+  timeout 3.0 "${NVIM}" --headless --server "${SOCKET}" --remote-expr 0 >/dev/null 2>&1 || return 2
   return 0
 }
 
@@ -93,7 +138,7 @@ function :headless() {
     args+=( "--startuptime" "${RX_STARTUPTIME}" )
   fi
 
-  args+=( "--headless" "--listen" "${socket}" )
+  args+=( "--headless" "--listen" "${SOCKET}" )
 
   nohup "${args[@]}" </dev/null >/dev/null 2>&1 &
   return 0
@@ -121,6 +166,7 @@ function :boot() {
   read -re LINES COLUMNS < <(stty size 2>/dev/null)
   export LINES COLUMNS
 
+  :mksocket "${@%/*}"
   :alive && :healthy && return 0
 
   local pid
@@ -128,7 +174,7 @@ function :boot() {
     :kill "${pid}" || return $?
   } || true
 
-  rm -f "${socket}"
+  rm -f "${SOCKET}"
   :headless
   :wait.block || return $?
 
@@ -139,7 +185,7 @@ function :pid() {
   :socket || return $?
 
   local pid
-  pid=$("${NVIM}" --headless --server "${socket}" --remote-expr 'getpid()' 2>/dev/null) || return 8
+  pid=$("${NVIM}" --headless --server "${SOCKET}" --remote-expr 'getpid()' 2>/dev/null) || return 8
   [[ "${pid}" =~ ^[0-9]+$ ]] || return 9
 
   echo "${pid}"
@@ -151,21 +197,17 @@ function :attach() {
   #local LINES=$(tput lines 2>/dev/null)
   local clicked=$1; shift
 
+  local -a tokens=( "$@" )
+  :mksocket "${tokens[@]%/*}"
+
   [[ $# -eq 0 ]] || ( :vsc "$@" )&
 
-  #local tui attached=0
-  _tui=$("${NVIM}" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null || echo "")
-  #if [[ "$tui" =~ ^[0-9]+$ ]] && (( tui > 0 )); then
-  #  attached=1
-  #fi
+  _tui=$("${NVIM}" --headless --server "${SOCKET}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null || echo "")
   [[ $# -gt 0 ]] || return 0
-
-  local -a tokens=( "$@" )
 
   local token
   for token in "${tokens[@]}"; do
-    echo "${token}" >> /tmp/x
-    "${NVIM}" --headless --server "${socket}" --remote-send "<Cmd>RakhshOpen ${token}<CR>" || return 11
+    "${NVIM}" --headless --server "${SOCKET}" --remote-send "<Cmd>RakhshOpen ${token}<CR>" || return 11
   done
 
   return 0
@@ -185,12 +227,12 @@ function :same() {
 }
 
 function :mirror.exec() {
-  exec "${NVIM}" --server "${socket}" --remote-ui
+  exec "${NVIM}" --server "${SOCKET}" --remote-ui
 }
 
 function :tui() {
   local attached
-  attached=$("${NVIM}" --headless --server "${socket}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null) || return 14
+  attached=$("${NVIM}" --headless --server "${SOCKET}" --remote-expr "len(luaeval('vim.api.nvim_list_uis()'))" 2>/dev/null) || return 14
   (( attached == 0 )) && return 15 || return 0
 }
 
@@ -210,7 +252,7 @@ function :tui.exec() {
       # Either we couldn't query UIs, or there are none yet.
       # In both cases, this terminal may become the UI owner.
       [[ -t 1 ]] || return 0
-      exec "${NVIM}" --server "${socket}" --remote-ui
+      exec "${NVIM}" --server "${SOCKET}" --remote-ui
       ;;
     *)
       # Unexpected status from :tui; propagate it as an error.
@@ -233,50 +275,28 @@ function :wait.block() {
   return 10
 }
 
-#! TODO: clean this shit up; use shopts and take -x|--do-x style flags
-: "${TESTING:=}"
-if [[ ${TESTING} == DUMP ]]; then
-  :debug
-elif [[ ${TESTING} == CLEAN ]]; then
-  :clean
-elif [[ -n "${TESTING}" ]]; then
-  echo "theirs:$(cat "$session") vs ours:$(cut -d: -f2 <<< "${ITERM_SESSION_ID}")"
-  set +e
-  echo "acronyms: <iec>: <inherited-error-codes>, <nec>: <native-error-codes>"
-  sleep $((0xCAFEBABE/10))&
-  sv=$!  #+ Sacrificial virgin
-  :debug
-  echo;          echo "   <test>      [<iec>] | [<nec>]:  <actual-ec>"
-  :clean
-  :socket;       echo "   socket           [] | [1]:     $?"
-  :alive;        echo "    alive          [1] | [2]:     $?"  #+ 1 from :socket
-  :healthy;      echo "  healthy          [1] | [2]:     $?"  #+ 1 from :socket, 2 from :alive
- #:headless;     echo " headless           [] | []:      $?"
-  :tui.exec;     echo " tui.exec    [1,2,5,7] | []:      $?"  #+ 1,2 from :healthy, 5,7 from ?
-  :kill ${sv};   echo "     kill           [] | [6]:     $?"
-  :boot;         echo "     boot          [6] | []:      $?"  #+ 6 from :kill
-  :pid;          echo "      pid          [1] | [8,9]:   $?"  #+ 1 from :socket
-  :attach;       echo "   attach           [] | [11]:    $?"
-  :wait.block;   echo "     wait           [] | [10]:    $?"
-  :debug
-else
+if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
+  #+ Mode: CLI/Mirror
   :boot
-  if [[ $# -eq 1 ]] && [[ "$1" == '--mirror' ]]; then
-    #+ Mode: CLI
-    :mirror.exec
-  elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
-    #+ Mode: iTerm
-    cd "$2" || exit 99
-    let clicked=1
-    :attach ${clicked} "${3}"
-    :tui.exec  # MAY exec into UI (and writes session on first TTY)
-  elif [[ $# -eq 1 ]] && [[ "$1" == '--status' ]] && [[ -S "${socket}" ]]; then
-    "${NVIM}" --server "${socket}" --headless --remote-expr "luaeval('require(\"core.status\").status_summary()')" +qa
-  else
-    #+ Mode: CLI
-    let clicked=0
-    :attach ${clicked} "$@"
-    :tui.exec  # MAY exec into UI (and writes session on first TTY)
-  fi
-  exit $?
+  :mirror.exec
+elif [[ $# -eq 3 ]] && [[ "$1" == '--iterm' ]]; then
+  #+ Mode: iTerm/Clicked
+  :boot "$3"
+  let clicked=1
+  :attach ${clicked} "$3"
+  :tui.exec  # MAY exec into UI (and writes session on first TTY)
+elif [[ $# -eq 1 ]] && [[ "$1" == '--status' ]]; then
+  #+ Mode: CLI/Info
+  :boot
+  #! TODO
+  #"${NVIM}" --server "${SOCKET}" --headless --remote-expr "luaeval('require(\"core.status\").status_summary()')" +qa
+  echo "Not Implemented"
+  exit 1
+else
+  #+ Mode: CLI/Terminal
+  :boot "$@"
+  let clicked=0
+  :attach ${clicked} "$@"
+  :tui.exec  # MAY exec into UI (and writes session on first TTY)
 fi
+exit $?
