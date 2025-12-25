@@ -7,3 +7,4 @@ vimbo.tabstop     = 2
 vimbo.softtabstop = 2
 
 vim.opt_local.iskeyword:append("-")
+vim.opt_local.iskeyword:append(":")
