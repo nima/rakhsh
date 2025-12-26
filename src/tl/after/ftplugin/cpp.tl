@@ -9,9 +9,14 @@ vimbo.shiftwidth  = 4
 vimbo.tabstop     = 4
 vimbo.softtabstop = 4
 vimbo.cindent     = true
+vimbo.smartindent = false
 vimbo.cinoptions  = "g0,h2,t0"
+vimbo.indentexpr = ""
 
 vim.opt_local.iskeyword:append("$")
+
+--+ Make `case:` indent relative to the switch block, not line length
+vim.bo.cinoptions = (vim.bo.cinoptions or "") .. ",:0,l1"
 
 local km = require("core.keymaps")
 local bufnr = vim.api.nvim_get_current_buf()
