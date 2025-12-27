@@ -78,11 +78,11 @@ local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
   return {
-    { mode="n", role=R.LSPGoto, key="gi", rhs="<cmd>Telescope lsp_incoming_calls<CR>", on=OnEvents.Attach, desc="[LSP] incoming calls",      tags={ T.ActionView, T.TargetBuffer    } },
-    { mode="n", role=R.LSPGoto, key="go", rhs="<cmd>Telescope lsp_outgoing_calls<CR>", on=OnEvents.Attach, desc="[LSP] outgoing calls",      tags={ T.ActionView, T.TargetBuffer    } },
-    { mode="n", role=R.LSPEdit, key="f",  rhs=format_buffer,                           on=OnEvents.Attach, desc="[LSP] format",              tags={ T.ActionEdit, T.TargetBuffer    } },
-    { mode="n", role=R.Toggle,  key="D",  rhs=toggle_loclist,                          on=OnEvents.Attach, desc="[LSP] diagnostics loclist", tags={ T.ActionView, T.TargetWorkspace } },
-    { mode="x", role=R.LSPEdit, key="A",  rhs=act_on_buf,                              on=OnEvents.Attach, desc="[LSP] code actions",        tags={ T.ActionEdit, T.TargetBuffer    } },
+    { mode="n", role=R.LSPGoto, key="gi", on=OnEvents.Attach, tags={ T.ActionView, T.TargetBuffer    }, rhs="<Cmd>Telescope hierarchy incoming_calls<CR>", desc="[LSP] incoming call hierarchy" },
+    { mode="n", role=R.LSPGoto, key="go", on=OnEvents.Attach, tags={ T.ActionView, T.TargetBuffer    }, rhs="<Cmd>Telescope hierarchy outgoing_calls<CR>", desc="[LSP] outgoing call hierarchy" },
+    { mode="n", role=R.LSPEdit, key="f",  on=OnEvents.Attach, tags={ T.ActionEdit, T.TargetBuffer    }, rhs=format_buffer,                                 desc="[LSP] format",                 },
+    { mode="n", role=R.Toggle,  key="D",  on=OnEvents.Attach, tags={ T.ActionView, T.TargetWorkspace }, rhs=toggle_loclist,                                desc="[LSP] diagnostics loclist",    },
+    { mode="x", role=R.LSPEdit, key="A",  on=OnEvents.Attach, tags={ T.ActionEdit, T.TargetBuffer    }, rhs=act_on_buf,                                    desc="[LSP] code actions",           },
   }
 end
 
@@ -114,7 +114,10 @@ function M.lazy(): {PluginSpec}
   local lsp_spec = ({
     "neovim/nvim-lspconfig",
     lazy = false,
-    dependencies = { "hrsh7th/cmp-nvim-lsp" },
+    dependencies = {
+      "hrsh7th/cmp-nvim-lsp",
+      "jmacadie/telescope-hierarchy.nvim",
+    },
     config = function()
       local lsp: VimLsp = vim.lsp as VimLsp
       local capabilities = mk_capabilities()
@@ -165,6 +168,8 @@ function M.lazy(): {PluginSpec}
           -- and keep them documented in our keymap registry.
 
           -- LSP navigation / actions.
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "gi", "<Cmd>Telescope hierarchy incoming_calls<CR>", keymaps.opts("[LSP] incoming call hierarchy", { T.ActionView, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto, "go", "<Cmd>Telescope hierarchy outgoing_calls<CR>", keymaps.opts("[LSP] outgoing call hierarchy", { T.ActionView, T.TargetBuffer }))
           keymaps.safemap_buf(b, "n", R.LSPGoto, "d",  function(...: any): any select('#', ...) lsp.buf.definition() end,       keymaps.opts("[LSP] Goto definition",       { T.ActionView,     T.TargetBuffer }))
           keymaps.safemap_buf(b, "n", R.LSPGoto, "D",  function(...: any): any select('#', ...) lsp.buf.declaration() end,      keymaps.opts("[LSP] Goto declaration",      { T.ActionView,     T.TargetBuffer }))
           keymaps.safemap_buf(b, "n", R.LSPGoto, "i",  function(...: any): any select('#', ...) lsp.buf.implementation() end,   keymaps.opts("[LSP] Goto implementation",   { T.ActionNavigate, T.TargetBuffer }))
@@ -227,7 +232,23 @@ function M.lazy(): {PluginSpec}
     end,
   } as PluginSpec)
 
-  return { lsp_spec }
+  local hierarchy_spec = ({
+    "jmacadie/telescope-hierarchy.nvim",
+    lazy = false,
+    dependencies = {
+      "nvim-telescope/telescope.nvim",
+      "nvim-lua/plenary.nvim",
+    },
+    config = function()
+      local _mod = "telescope"
+      local telescope = require(_mod) as t.telescope.Telescope
+
+      -- Extension provides `:Telescope hierarchy incoming_calls|outgoing_calls`.
+      pcall(function() telescope.load_extension("hierarchy") end)
+    end,
+  } as PluginSpec)
+
+  return { lsp_spec, hierarchy_spec }
 end
 
 return M
