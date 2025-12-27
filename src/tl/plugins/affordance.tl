@@ -81,28 +81,8 @@ function M.lazy(): {PluginSpec}
       local theme = cfg.colorschema
       if theme == nil or theme == "" then return end
 
-      local applied = false
-      local function apply_once(): nil
-        if applied then return end
-        applied = true
-        pcall(vim.api.nvim_command, "colorscheme " .. theme)
-      end
-
-      --+ If already have UI, apply immediately...
-      if #vim.api.nvim_list_uis() ~= 0 then apply_once() end
-
-      --+ Register via UIEnter hook so headless server startup still gets theme
-      --+ once UI attaches...
-      local GROUP_NAME = "rakhsh_colorscheme"
-      vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
-      vim.api.nvim_create_autocmd("UIEnter", {
-        group = GROUP_NAME,
-        callback = function(_: vim.AutocmdCallbackData): any
-          if #vim.api.nvim_list_uis() == 0 then return end
-          apply_once()
-        end,
-        once = true,
-      })
+      -- Apply immediately; plugin is lazy=false + priority=1000 so it is on runtimepath.
+      pcall(vim.api.nvim_command, "colorscheme " .. theme)
     end,
   } as PluginSpec)
 

@@ -86,9 +86,11 @@ function M.lazy(): {PluginSpec}
     "nvim-lualine/lualine.nvim",
     lazy = false,
     config = function()
+      vim.o.termguicolors = true
       local _mod = "lualine"
       local mod = (require(_mod) as Lualine)
-      mod.setup({
+
+      local cfg = {
         options = {
           theme = "auto",
           icons_enabled = true,
@@ -118,7 +120,44 @@ function M.lazy(): {PluginSpec}
           lualine_y = { used_registers, used_marks, "progress" },
           lualine_z = { "location" },
         },
+      }
+
+      --+ Invariant: lualine.setup() must run only after
+      --+   termguicolors == true
+      --+   :colorscheme has been applied
+      local did_setup = false
+      local function setup_lualine(): nil
+        if did_setup then return nil end
+        did_setup = true
+        mod.setup(cfg)
+        return nil
+      end
+
+      -- If a colorscheme is applied after we load, run exactly once on that event.
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        once = true,
+        callback = function(_: any): nil
+          return setup_lualine()
+        end,
       })
+
+      -- Fallback: if ColorScheme already happened before we registered the autocmd,
+      -- run once at the end of startup.
+      vim.api.nvim_create_autocmd("VimEnter", {
+        once = true,
+        callback = function(_: any): nil
+          if tostring(vim.g.colors_name or "") ~= "" then
+            return setup_lualine()
+          end
+          return nil
+        end,
+      })
+
+      -- If the colorscheme was already applied before this config ran, the
+      -- ColorScheme event won't fire; set up immediately.
+      if tostring(vim.g.colors_name or "") ~= "" then
+        setup_lualine()
+      end
     end,
   } as PluginSpec)
 
