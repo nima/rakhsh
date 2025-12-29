@@ -108,9 +108,8 @@ end
 local function mklhs(mode: string, role: t.roles.Role, key: string): string
   ensure_role(mode, role, key)
 
+  --& Wildcard leaders like `<C-*>` / `<A-*>` / `<S-*>`.
   local leader = role.leader
-
-  -- Wildcard leader like `<C-*>` / `<A-*>` / `<S-*>`.
   if leader:find("%*") then
     local rplc, cnt = leader:gsub("%*", key)
     if cnt == 1 then return rplc end
@@ -122,7 +121,7 @@ end
 
 --! TODO: Deprecate decode_lhs; pass in role directly
 local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
-  -- We derive decode rules from Roles[*].leader. `mode` is only used for error messages.
+  --+ Derive decode rules from Roles[*].leader. `mode` is only used for error messages.
   local best_role: t.roles.Role | nil = nil
   local best_tail: string = ""
   local best_len: integer = -1
@@ -132,17 +131,14 @@ local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
       local role = any_role as t.roles.Role
       local leader = role.leader
 
-      if leader == "" then
-        -- Naked role matches anything, but only if we didn't find a more specific match.
-        if best_len < 0 then
-          best_role = role
-          best_tail = lhs
-          best_len = 0
-        end
-
+      if leader == "" and best_len < 0 then
+        --+ Naked role matches anything, but only if we didn't find a more specific match.
+        best_role = role
+        best_tail = lhs
+        best_len = 0
       elseif leader:find("%*") then
-        -- Convert leader containing `*` into a Lua pattern that captures the wildcard.
-        -- Example: `<C-*>` -> `^<C%-(.+)>$`
+        --+ Convert leader containing `*` into a Lua pattern that captures the wildcard.
+        --& `<C-*>` -> `^<C%-(.+)>$`
         local pat = "^" .. leader:gsub("([%^%$%(%)%%%.%[%]%+%-%?])", "%%%1"):gsub("%%%*", "(.+)") .. "$"
         local cap = lhs:match(pat)
         if cap ~= nil then
@@ -153,7 +149,6 @@ local function decode_lhs(mode: string, lhs: string): (t.roles.Role, string)
             best_len = eff_len
           end
         end
-
       else
         if lhs:sub(1, #leader) == leader then
           local tail = lhs:sub(#leader + 1)
