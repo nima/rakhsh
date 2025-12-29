@@ -110,6 +110,15 @@ local function mk_capabilities(): any
   return capabilities
 end
 
+global function L<U>(fn: U, ...: any): (function(...: any): any...)
+    local args = {...}
+    return function(...: any): any...
+        local _ = {...} 
+        return (fn as function(...: any): any...)(table.unpack(args))
+    end
+end
+
+
 function M.lazy(): {PluginSpec}
   local lsp_spec = ({
     "neovim/nvim-lspconfig",
@@ -168,40 +177,40 @@ function M.lazy(): {PluginSpec}
           -- and keep them documented in our keymap registry.
 
           -- LSP navigation / actions.
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "gi", "<Cmd>Telescope hierarchy incoming_calls<CR>", keymaps.opts("[LSP] incoming call hierarchy", { T.ActionView, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "go", "<Cmd>Telescope hierarchy outgoing_calls<CR>", keymaps.opts("[LSP] outgoing call hierarchy", { T.ActionView, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "d",  function(...: any): any select('#', ...) lsp.buf.definition() end,       keymaps.opts("[LSP] Goto definition",       { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "D",  function(...: any): any select('#', ...) lsp.buf.declaration() end,      keymaps.opts("[LSP] Goto declaration",      { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "i",  function(...: any): any select('#', ...) lsp.buf.implementation() end,   keymaps.opts("[LSP] Goto implementation",   { T.ActionNavigate, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPInfo, "rr", function(...: any): any select('#', ...) lsp.buf.references() end,       keymaps.opts("[LSP] References",            { T.ActionList,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPGoto, "rt", function(...: any): any select('#', ...) lsp.buf.type_definition() end,  keymaps.opts("[LSP] Goto type definition",  { T.ActionView,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPEdit, "rn", function(...: any): any select('#', ...) lsp.buf.rename() end,           keymaps.opts("[LSP] Rename symbol",         { T.ActionEdit,     T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.LSPEdit, "ra", function(...: any): any select('#', ...) lsp.buf.code_action() end,      keymaps.opts("[LSP] code action",           { T.ActionEdit,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "gi",  "<Cmd>Telescope hierarchy incoming_calls<CR>", keymaps.opts("[LSP] incoming call hierarchy", { T.ActionView, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "go",  "<Cmd>Telescope hierarchy outgoing_calls<CR>", keymaps.opts("[LSP] outgoing call hierarchy", { T.ActionView, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "d",   L(lsp.buf.definition),                       keymaps.opts("[LSP] Goto definition",       { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "D",   L(lsp.buf.declaration),                      keymaps.opts("[LSP] Goto declaration",      { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "i",   L(lsp.buf.implementation),                   keymaps.opts("[LSP] Goto implementation",   { T.ActionNavigate, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPInfo,   "rr",  L(lsp.buf.references),                       keymaps.opts("[LSP] References",            { T.ActionList,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPGoto,   "rt",  L(lsp.buf.type_definition),                  keymaps.opts("[LSP] Goto type definition",  { T.ActionView,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPEdit,   "rn",  L(lsp.buf.rename),                           keymaps.opts("[LSP] Rename symbol",         { T.ActionEdit,     T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.LSPEdit,   "ra",  L(lsp.buf.code_action),                      keymaps.opts("[LSP] code action",           { T.ActionEdit,     T.TargetBuffer }))
 
           -- Back-compat (common defaults): only in LSP-attached buffers.
-          keymaps.safemap_buf(b, "n", R.Naked, "grn", function(...: any): any select('#', ...) lsp.buf.rename() end,           keymaps.opts("[LSP] Rename",              { T.ActionEdit, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "gra", function(...: any): any select('#', ...) lsp.buf.code_action() end,      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "x", R.Naked, "gra", function(...: any): any select('#', ...) lsp.buf.code_action() end,      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "grn", L(lsp.buf.rename),                           keymaps.opts("[LSP] Rename",              { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "gra", L(lsp.buf.code_action),                      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "x", R.Tradition, "gra", L(lsp.buf.code_action),                      keymaps.opts("[LSP] Code action",         { T.ActionEdit, T.TargetBuffer, T.Compat }))
 
-          keymaps.safemap_buf(b, "n", R.Naked, "grD", function(...: any): any select('#', ...) lsp.buf.declaration() end,      keymaps.opts("[LSP] Goto declaration",    { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "grD", L(lsp.buf.declaration),                      keymaps.opts("[LSP] Goto declaration",    { T.ActionView, T.TargetBuffer, T.Compat }))
 
-          keymaps.safemap_buf(b, "n", R.Naked, "grr", "<Cmd>Telescope lsp_references<CR>",       keymaps.opts("[LSP] References",       { T.ActionList, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "gri", "<Cmd>Telescope lsp_implementations<CR>",  keymaps.opts("[LSP] Implementations",  { T.ActionView, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "grd", "<Cmd>Telescope lsp_definitions<CR>",      keymaps.opts("[LSP] Definitions",      { T.ActionView, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "grt", "<Cmd>Telescope lsp_type_definitions<CR>", keymaps.opts("[LSP] Type definitions", { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "grr", "<Cmd>Telescope lsp_references<CR>",         keymaps.opts("[LSP] References",       { T.ActionList, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "gri", "<Cmd>Telescope lsp_implementations<CR>",    keymaps.opts("[LSP] Implementations",  { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "grd", "<Cmd>Telescope lsp_definitions<CR>",        keymaps.opts("[LSP] Definitions",      { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "grt", "<Cmd>Telescope lsp_type_definitions<CR>",   keymaps.opts("[LSP] Type definitions", { T.ActionView, T.TargetBuffer, T.Compat }))
 
-          keymaps.safemap_buf(b, "n", R.Naked, "gO", "<Cmd>Telescope lsp_document_symbols<CR>",           keymaps.opts("[LSP] Document symbols",  { T.ActionView, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "gW", "<Cmd>Telescope lsp_dynamic_workspace_symbols<CR>",  keymaps.opts("[LSP] Workspace symbols", { T.ActionView, T.TargetWorkspace, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "gO",  "<Cmd>Telescope lsp_document_symbols<CR>",          keymaps.opts("[LSP] Document symbols",  { T.ActionView, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "gW",  "<Cmd>Telescope lsp_dynamic_workspace_symbols<CR>", keymaps.opts("[LSP] Workspace symbols", { T.ActionView, T.TargetWorkspace, T.Compat }))
 
           -- LSP info/help.
-          keymaps.docmap_buf(b, "n", "K",  keymaps.opts("[LSP] hover", { T.ActionHelp, T.TargetBuffer }))
-          keymaps.docmap_buf(b, "i", "<C-x><C-o>", keymaps.opts("[LSP] omni-completion", { T.ActionEdit, T.TargetBuffer, T.Compat }))
-          keymaps.safemap_buf(b, "n", R.Naked, "<C-k>", function(...: any): any select('#', ...) lsp.buf.signature_help() end,  keymaps.opts("[LSP] signature help",       { T.ActionHelp, T.TargetBuffer }))
+          keymaps.docmap_buf(b,  "n",              "K",                                 keymaps.opts("[LSP] hover", { T.ActionHelp, T.TargetBuffer }))
+          keymaps.docmap_buf(b,  "i",              "<C-x><C-o>",                        keymaps.opts("[LSP] omni-completion", { T.ActionEdit, T.TargetBuffer, T.Compat }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "<C-k>", L(lsp.buf.signature_help),  keymaps.opts("[LSP] signature help",       { T.ActionHelp, T.TargetBuffer }))
 
           -- Diagnostics.
-          keymaps.safemap_buf(b, "n", R.Go,    "l", function(...: any): any select('#', ...) vim.diagnostic.open_float({}) end,  keymaps.opts("[LSP] line diagnostics",        { T.ActionHelp, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Naked, "[d", function(...: any): any select('#', ...) vim.diagnostic.goto_prev({}) end,  keymaps.opts("[LSP] previous diagnostic",      { T.ActionView, T.TargetBuffer }))
-          keymaps.safemap_buf(b, "n", R.Naked, "]d", function(...: any): any select('#', ...) vim.diagnostic.goto_next({}) end,  keymaps.opts("[LSP] next diagnostic",          { T.ActionView, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.Go,        "l",     L(vim.diagnostic.open_float, {}),  keymaps.opts("[LSP] line diagnostics",        { T.ActionHelp, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "[d",    L(vim.diagnostic.goto_prev, {}),   keymaps.opts("[LSP] previous diagnostic",      { T.ActionView, T.TargetBuffer }))
+          keymaps.safemap_buf(b, "n", R.Tradition, "]d",    L(vim.diagnostic.goto_next, {}),   keymaps.opts("[LSP] next diagnostic",          { T.ActionView, T.TargetBuffer }))
         end,
       })
 
