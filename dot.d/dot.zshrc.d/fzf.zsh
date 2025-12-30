@@ -1,4 +1,7 @@
 source <(fzf --zsh)
+FZF_BASE="$(brew --prefix fzf)/shell"
+source "$FZF_BASE/key-bindings.zsh"
+source "$FZF_BASE/completion.zsh"
 
 fzf-rg-search-widget() {
   # Split the CLI buffer: keep everything before the last space as prefix, use final token as query
