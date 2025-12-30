@@ -7,7 +7,7 @@ function M.init(): nil
   --+ vim.wo is the current window
   --+ vim.opt is the smart API that sets BOTH vim.o and vim.wo correctly
 
-  --= 1. Disable legacy built-in plugins
+  --+ 1. Disable legacy built-in plugins
   vim.g.loaded_matchit = 1
   do
     local sm = vim.o.shortmess
@@ -17,18 +17,16 @@ function M.init(): nil
   end
   vim.o.swapfile = false
 
-  --= 2. Pure Core State
+  --+ 2. Pure Core State
   vim.o.laststatus = 3
   vim.o.showmode = false
   vim.o.cmdheight = 0
 
-  --= 3. User Settings
+  --+ 3. User Settings
   vim.o.updatetime = 500
   vim.o.termguicolors = true
   vim.o.numberwidth = 3
   vim.o.signcolumn = "yes:2"
-  --vim.opt.clipboard = "unnamedplus"
-  vim.o.mouse = "a"
   vim.o.more = false
   vim.o.wrap = false
   vim.o.scrolloff = cfg.scrolloff
@@ -37,7 +35,18 @@ function M.init(): nil
 
   vim.g.mapleader = " "
 
-  --Comment defaults
+  --+ Limited Mouse -=[
+  --vim.opt.clipboard = "unnamedplus"
+  vim.o.mouse = "a"
+
+  --+ Mouse-only: on left-button release (end of mouse selection), yank selection to system clipboard
+  vim.keymap.set("v", "<LeftRelease>", function(): nil
+    vim.cmd('normal! "+y')
+    return nil
+  end, { silent = true })
+  -- ]=-
+
+  --+ Comment defaults
   vim.api.nvim_create_augroup("rakhsh_auto_comments", { clear = true })
   vim.api.nvim_create_autocmd("FileType", {
     group = "rakhsh_auto_comments",
