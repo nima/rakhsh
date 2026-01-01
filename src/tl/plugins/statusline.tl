@@ -73,6 +73,26 @@ local function used_marks(): string
   return "'" .. table.concat(used, "")
 end
 
+local function filename_root(): string
+  local file = (vim.api.nvim_buf_get_name(0) as string)
+  if file == "" then return "[No Name]" end
+
+  local root = (vim.fn.getenv("ROOT") as string)
+  if root ~= "" then
+    -- Normalize: strip trailing slash from ROOT.
+    if root:sub(#root, #root) == "/" then
+      root = root:sub(1, #root - 1)
+    end
+
+    local prefix = root .. "/"
+    if file:sub(1, #prefix) == prefix then
+      return file:sub(#prefix + 1)
+    end
+  end
+
+  return file
+end
+
 --------------------------------------------------------------------------------
 
 local M: t.plugins.PluginModule = {}
@@ -107,7 +127,7 @@ function M.lazy(): {PluginSpec}
             },
           },
           lualine_c = {
-            "filename",
+            filename_root,
             {
               "diagnostics",
               sources = { "nvim_diagnostic" },

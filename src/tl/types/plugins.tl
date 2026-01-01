@@ -15,6 +15,7 @@ setmetatable(KeymapEvents, { __newindex = function() error("Cannot add new value
 
 local record PluginKeymap
   mode: string
+  path: string
   role: Role
   key:  string
   rhs:  any
