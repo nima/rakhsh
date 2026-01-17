@@ -73,7 +73,12 @@ local function used_marks(): string
   return "'" .. table.concat(used, "")
 end
 
-local function filename_root(): string
+local function ideroot(): string
+  local p = (vim.env.ROOT as string):gsub("/+$", "")
+  return p:match("([^/]+)$") or p
+end
+
+local function filename(): string
   local file = (vim.api.nvim_buf_get_name(0) as string)
   if file == "" then return "[No Name]" end
 
@@ -120,14 +125,10 @@ function M.lazy(): {PluginSpec}
         },
         sections = {
           lualine_a = { "mode", recording_status },
-          lualine_b = {
-            "branch",
-            {
-              "diff", symbols = { added = "+", modified = "~", removed = "-" },
-            },
-          },
+          lualine_b = { "branch", { "diff", symbols = { added = "+", modified = "~", removed = "-" } } },
           lualine_c = {
-            filename_root,
+            { ideroot, color = { fg = "#ff9e64", gui = "bold" } },
+            { filename, color = { fg = "#339e64" } },
             {
               "diagnostics",
               sources = { "nvim_diagnostic" },
