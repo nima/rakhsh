@@ -89,6 +89,8 @@ function :debug() {
 }
 
 function :vsc() {
+  return 0
+
   # VS Code CLI must exist
   [[ -x "${vscode}" ]] || return 0
 
