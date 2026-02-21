@@ -43,23 +43,36 @@ local tagdefs: { {string, string} } = {
   { "$", "CommentTagCost" },        --$ Cost / perf / memory
   { "O", "CommentTagONotation" },   --O Big-O / complexity
   { "~", "CommentTagDeprecation" }, --~ Deprecated / to be removed
+  { "/", "CommentTagDoc" },         --/ Deprecated / to be removed
+  { "|", "CommentTagRestriction" }, --| Restrictions, ranges, validations
 }
 
 local function redefine_comment_tag_highlights(): nil
   local defs: { {string, {string:any}} } = {
     { "CommentTagTitle",       { fg = "#FFFFFF", bold = true } },
-    { "CommentTagNotice",      { fg = "#FFD23F" } },
-    { "CommentTagProbing",     { fg = "#FC59A3" } },
-    { "CommentTagFYI",         { fg = "#3EA8FF" } },
-    { "CommentTagStaged",      { fg = "#87C830" } },
-    { "CommentTagUpstream",    { fg = "#FF7F50" } },
-    { "CommentTagDownstream",  { fg = "#FF9F1C" } },
-    { "CommentTagAttention",   { fg = "#FF3366" } },
-    { "CommentTagReference",   { fg = "#00CEC9", italic = true } },
-    { "CommentTagCost",        { fg = "#FFA600" } },
-    { "CommentTagONotation",   { fg = "#FF6F61" } },
-    { "CommentTagDeprecation", { fg = "#FF3333", strikethrough = true } },
+
+    -- warn / hot
+    { "CommentTagAttention",   { fg = "#FF3333", bold = true } },                 -- critical red
+    { "CommentTagDeprecation", { fg = "#9CA3AF", strikethrough = true } },        -- deprecated greyed out
+    { "CommentTagNotice",      { fg = "#FFD23F" } },                              -- warning yellow
+
+    -- info / meta
+    { "CommentTagFYI",         { fg = "#3EA8FF" } },                              -- info blue
+    { "CommentTagReference",   { fg = "#00CEC9", italic = true } },               -- link/refs teal
+    { "CommentTagDoc",         { fg = "#7C4DFF" } },                              -- documentation purple
+
+    -- flow / direction
+    { "CommentTagUpstream",    { fg = "#FF7F50" } },                              -- coral
+    { "CommentTagDownstream",  { fg = "#FF9F1C" } },                              -- orange
+    { "CommentTagStaged",      { fg = "#87C830" } },                              -- green (good/ready)
+
+    -- intent / constraints / misc
+    { "CommentTagCost",        { fg = "#FFA600" } },                              -- money/gold
+    { "CommentTagRestriction", { fg = "#FF3366" } },                              -- “no/blocked” magenta
+    { "CommentTagProbing",     { fg = "#FC59A3" } },                              -- probing pink
+    { "CommentTagONotation",   { fg = "#FF6F61" } },                              -- salmon
   }
+
   for _, d in ipairs(defs) do
     vim.api.nvim_set_hl(0, d[1], d[2])
   end
@@ -79,42 +92,70 @@ local function apply_comment_tag_extmarks(bufnr: integer): nil
 
   --+ Highlights are (re)defined in setup() and on ColorScheme; avoid doing it
   --+ on every redraw.
-  local leader = get_comment_leader(bufnr)
-  if leader == nil then return end
+  local leader0 = get_comment_leader(bufnr)
+  if leader0 == nil then return end
+  local leader = (leader0 as string)
 
   --+ Only clear when we can also repopulate (e.g. after FileType sets commentstring).
   vim.api.nvim_buf_clear_namespace(bufnr, ns_tags, 0, -1)
 
-  local esc_leader = vim.pesc(leader)
   local leader_idx = leader
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
   for linenr, line in ipairs(lines) do
-    if not line:find(leader_idx, 1, true) then goto continue end
+    -- Only consider the *first* comment leader on the line.
+    local c0 = line:find(leader_idx, 1, true)
+    if c0 == nil then goto continue end
 
-    -- Find the first tag that matches at the start of the comment leader, and
+    local s0 = c0 + #leader
+    if s0 > #line then goto continue end
+
+    -- If this is a doc-comment continuation leader (e.g. `///` in C++ or `---` in Lua), skip it
+    -- only when the extra leader character is NOT one of our tag characters.
+    if #leader >= 2 then
+      local last_leader_ch = leader:sub(#leader, #leader)
+      local next_ch = line:sub(s0, s0)
+
+      if next_ch == last_leader_ch then
+        local is_tag = false
+        for _, d in ipairs(tagdefs) do
+          if d[1] == next_ch then
+            is_tag = true
+            break
+          end
+        end
+        if not is_tag then goto continue end
+      end
+    end
+
+    -- Find the first tag that matches immediately after the comment leader, and
     -- apply exactly one highlight per line.
     for _, d in ipairs(tagdefs) do
       local ch, hl = d[1], d[2]
-      local pat = esc_leader .. vim.pesc(ch) .. "%s*"
+      if line:sub(s0, s0) == ch then
+        -- Require whitespace (or EOL) after the tag marker so we don't match cases like `---+`.
+        local after = line:sub(s0 + 1, s0 + 1)
+        if after ~= "" and not after:match("%s") then goto continue_tag end
 
-      local s, e = line:find(pat)
-      if s then
-        local content_start = e
+        -- Highlight everything after the tag marker (skipping whitespace).
+        local content_start = s0
+        while content_start < #line and line:sub(content_start + 1, content_start + 1):match("%s") do
+          content_start = content_start + 1
+        end
+
         if content_start < #line then
-          local content_end = #line
-          if content_end > content_start then
-            vim.api.nvim_buf_set_extmark(bufnr, ns_tags, linenr - 1, content_start, {
-              end_col  = content_end,
-              hl_group = hl,
-              hl_mode  = "combine",
-              priority = 200,
-            })
-          end
+          vim.api.nvim_buf_set_extmark(bufnr, ns_tags, linenr - 1, content_start, {
+            end_col  = #line,
+            hl_group = hl,
+            hl_mode  = "combine",
+            priority = 200,
+          })
         end
 
         break --+ Only one tag highlight per line.
       end
+
+      ::continue_tag::
     end
 
     ::continue::

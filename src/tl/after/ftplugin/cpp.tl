@@ -35,3 +35,4 @@ km.safemap_buf(bufnr, "n", R.Toggle, "c", function(...: any): any
 
   return nil
 end, km.opts("Switch between .cpp and .hpp", { T.ActionEdit, T.TargetFile } ))
+

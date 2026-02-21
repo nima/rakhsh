@@ -52,6 +52,10 @@ local record TreeSitterConfigsModule
   setup: function(config: { string: any }): nil
 end
 
+local record DocCommentTagsModule
+  setup: function(cfg: { string: any } | nil): nil
+end
+
 local M: t.plugins.PluginModule = {}
 
 function M.keymaps(): {PluginKeymap}
@@ -96,9 +100,20 @@ function M.lazy(): {PluginSpec}
     lazy = false,
   } as PluginSpec)
 
+  local doccomment_tags_spec = ({
+    "Blackcyan30/nvim-doccomment-tags",
+    lazy = false,
+    config = function(): nil
+      local _cfg = "nvim-doccomment-tags.doccomment-tags"
+      local mod = (require(_cfg) as DocCommentTagsModule)
+      mod.setup(nil)
+    end,
+  } as PluginSpec)
+
   return {
     treesitter_spec,
     teal_spec,
+    doccomment_tags_spec,
   }
 end
 
