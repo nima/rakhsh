@@ -53,7 +53,7 @@ local function update_cursorword(): nil
   local ok, word_any = pcall(vim.fn.expand, "<cword>")
   local word = word_any as string
   if not ok or word == nil or word == "" then
-    --+ no word under cursor → keep existing highlight instead of killing it
+    clear_cursorword()
     return
   end
 
@@ -123,8 +123,31 @@ function M.init(): nil
     callback = apply,
   })
 
+  
+  -- Clear stale search highlights (built-in hlsearch) and matchadd()-based leftovers.
+  vim.api.nvim_create_autocmd("CmdlineLeave", {
+    group = GROUP_NAME,
+    callback = function(): nil
+      local ct_any = vim.fn.getcmdtype()
+      local ct = ct_any as string
+      if ct == "/" or ct == "?" then
+        vim.cmd("nohlsearch")
+        vim.fn.clearmatches()
+        update_cursorword()
+      end
+    end,
+  })
+
+  vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter" }, {
+    group = GROUP_NAME,
+    callback = function(): nil
+      vim.cmd("nohlsearch")
+    end,
+  })
+
   -- Cursor-word autocmds
   vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+    group = GROUP_NAME,
     callback = function(): nil update_cursorword() end,
   })
 end
