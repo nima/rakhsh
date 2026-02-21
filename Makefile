@@ -228,7 +228,6 @@ stage: extern pre-validate
 			bat $(RAKHSH_CACHE)/cyan-louder.log;\
 			exit 1;\
 		}
-	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ stage/lua/
 .PHONY: stage
 
 iTerm2.regex:; @jq -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
@@ -264,6 +263,11 @@ $(RAKHSH_CONFIG): stage
 	@rsync -a --info=NAME0 --delete $</ $@/
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
+	@# Install Tree-sitter query overrides (rx-louder)
+	@mkdir -p $(RAKHSH_DATA)/site/queries
+	@rsync -a --info=NAME0 --prune-empty-dirs \
+		--include "*/" --include "*.scm" --exclude "*" \
+		src/queries/ $(RAKHSH_DATA)/site/queries/
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
 .PHONY: $(RAKHSH_CONFIG)
 sync: $(RAKHSH_CONFIG) link splash
