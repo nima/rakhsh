@@ -3,7 +3,7 @@ local vimbo = vim.bo
 local R = t.roles.Roles
 local T = t.tags.Tags
 
--- C / C++
+--+ C / C++
 vimbo.expandtab   = true
 vimbo.shiftwidth  = 4
 vimbo.tabstop     = 4
@@ -36,3 +36,16 @@ km.safemap_buf(bufnr, "n", R.Toggle, "c", function(...: any): any
   return nil
 end, km.opts("Switch between .cpp and .hpp", { T.ActionEdit, T.TargetFile } ))
 
+--+ Tree-sitter: rx-louder-style tag colors for C/C++ block comments like /*+ ... */
+vim.api.nvim_set_hl(0, "@comment.tag.title",       { link = "CommentTagTitle" })
+vim.api.nvim_set_hl(0, "@comment.tag.notice",      { link = "CommentTagNotice" })
+vim.api.nvim_set_hl(0, "@comment.tag.probing",     { link = "CommentTagProbing" })
+vim.api.nvim_set_hl(0, "@comment.tag.fyi",         { link = "CommentTagFYI" })
+vim.api.nvim_set_hl(0, "@comment.tag.staged",      { link = "CommentTagStaged" })
+vim.api.nvim_set_hl(0, "@comment.tag.upstream",    { link = "CommentTagUpstream" })
+vim.api.nvim_set_hl(0, "@comment.tag.downstream",  { link = "CommentTagDownstream" })
+vim.api.nvim_set_hl(0, "@comment.tag.attention",   { link = "CommentTagAttention" })
+vim.api.nvim_set_hl(0, "@comment.tag.reference",   { link = "CommentTagReference" })
+vim.api.nvim_set_hl(0, "@comment.tag.cost",        { link = "CommentTagCost" })
+vim.api.nvim_set_hl(0, "@comment.tag.onotation",   { link = "CommentTagONotation" })
+vim.api.nvim_set_hl(0, "@comment.tag.deprecation", { link = "CommentTagDeprecation" })
