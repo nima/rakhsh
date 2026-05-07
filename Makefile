@@ -74,8 +74,11 @@ RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
 RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
 RAKHSH_ZSHRC  := $(HOME)/.zshrc.d/rakhsh.zsh
 
+LUA_VERSION := 5.4
+lua_dir     := $(shell brew --prefix lua@$(LUA_VERSION) 2>/dev/null)
+
 brew     := $(shell command -v brew || exit 2)
-luarocks := $(LUAROCKS_BIN)
+luarocks := $(shell command -v luarocks || exit 1) --lua-dir $(lua_dir)
 npm      := $(shell command -v npm || exit 1)
 #= macOS ships an ancient rsync (2.6.9, no --info/--prune-empty-dirs) at
 #= /usr/bin/rsync, earlier in PATH than HomeBrew's, so it silently shadows
@@ -227,6 +230,8 @@ dependencies: caches installed outdated
 	@#= LUAROCKS_INSTALLED/OUTDATED), not here -- doing it again here too
 	@#= raced the package-list cache and made brew report a bogus "install"
 	@#= on every run of an already-installed formula.
+	@$(call brew-install,lua@$(LUA_VERSION))
+	@$(call brew-install,luarocks)
 	@$(call luarocks-install,tl)
 	@$(call luarocks-install,cyan)
 	@$(call luarocks-install,teal-language-server)
