@@ -44,8 +44,11 @@ RAKHSH_LAZY   := $(RAKHSH_DATA)/lazy
 RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
 RAKHSH_ZSHRC  := $(HOME)/.zshrc.d/rakhsh.zsh
 
+LUA_VERSION := 5.4
+lua_dir     := $(shell brew --prefix lua@$(LUA_VERSION) 2>/dev/null)
+
 brew     := $(shell command -v brew || exit 2)
-luarocks := $(shell command -v luarocks || exit 1)
+luarocks := $(shell command -v luarocks || exit 1) --lua-dir $(lua_dir)
 npm      := $(shell command -v npm || exit 1)
 teal     := $(shell command -v tl)
 tlchk    := $(shell command -v libexec/tlchk)
@@ -177,6 +180,7 @@ dependencies: caches installed outdated
 	@#= C++
 	@$(call brew-install,llvm)
 	@#= Lua & Teal
+	@$(call brew-install,lua@$(LUA_VERSION))
 	@$(call brew-install,luarocks)
 	@$(call luarocks-install,tl)
 	@$(call luarocks-install,cyan)
