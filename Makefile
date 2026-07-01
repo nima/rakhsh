@@ -35,6 +35,23 @@ cache = $(shell mkdir -p /tmp/$(NVIM_APPNAME); echo "/tmp/rakhsh.$(1)")
 ITERM2_PLIST    := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
 ITERM2_DYN_PROF := $(HOME)/Library/Application Support/iTerm2/DynamicProfiles/rakhsh.json
 
+#= Teal (tl/cyan) pulls in compat53, which lags behind HomeBrew's default
+#= `lua` formula by a major version or two (no rocks for the new version
+#= yet). Pin the toolchain to a keg-only lua@X.Y formula that's actually
+#= supported; bump LUA_TEAL_VERSION once compat53 catches up or HomeBrew
+#= drops this formula. Check: https://luarocks.org/modules/hishamhm/compat53
+HOMEBREW_PREFIX  := /opt/homebrew
+LUA_TEAL_VERSION := 5.4
+LUA_TEAL_FORMULA := lua@$(LUA_TEAL_VERSION)
+LUA_TEAL_PREFIX  := $(HOMEBREW_PREFIX)/opt/$(LUA_TEAL_FORMULA)
+LUA_TEAL_BIN     := $(LUA_TEAL_PREFIX)/bin/lua$(LUA_TEAL_VERSION)
+#= Without an explicit --tree, luarocks deploys rocks under whatever
+#= --lua-dir prefix it's given (i.e. under lua@5.4's own keg) instead of
+#= the shared system tree everything else lives in, so tl/cyan would
+#= never land on PATH. Force it to the same tree HomeBrew's own luarocks
+#= build defaults to for the linked `lua`.
+LUA_ROCKS_TREE   := $(HOMEBREW_PREFIX)
+
 RAKHSH_CONFIG := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("config"))' +qa)
 RAKHSH_DATA   := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("data"))'   +qa)
 RAKHSH_STATE  := $(shell NVIM_LOG_FILE=/dev/null $(nvim) --headless --clean +'lua io.stdout:write(vim.fn.stdpath("state"))'  +qa)
@@ -47,6 +64,16 @@ RAKHSH_ZSHRC  := $(HOME)/.zshrc.d/rakhsh.zsh
 brew     := $(shell command -v brew || exit 2)
 luarocks := $(shell command -v luarocks || exit 1)
 npm      := $(shell command -v npm || exit 1)
+#= macOS ships an ancient rsync (2.6.9, no --info/--prune-empty-dirs) at
+#= /usr/bin/rsync, earlier in PATH than HomeBrew's, so it silently shadows
+#= the modern one `brew install rsync` puts at $(HOMEBREW_PREFIX)/bin/rsync.
+#= No fallback to system rsync here: it doesn't support the flags this
+#= Makefile relies on, so falling back to it would just fail later anyway,
+#= less legibly.
+rsync    := $(HOMEBREW_PREFIX)/bin/rsync
+#= Recent macOS also bundles its own (older) jq at /usr/bin/jq, shadowing
+#= HomeBrew's, same as rsync above.
+jq       := $(HOMEBREW_PREFIX)/bin/jq
 teal     := $(shell command -v tl)
 tlchk    := $(shell command -v libexec/tlchk)
 find     := $(shell command -v find)
@@ -98,20 +125,24 @@ endef
 LUAROCKS_DIRTY     := $(call cache,LUAROCKS_DIRTY)
 LUAROCKS_INSTALLED := $(call cache,LUAROCKS_INSTALLED)
 LUAROCKS_OUTDATED  := $(call cache,LUAROCKS_OUTDATED)
-${LUAROCKS_INSTALLED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --porcelain) > $@
-${LUAROCKS_OUTDATED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --outdated --porcelain) > $@
+$(LUA_TEAL_BIN):
+	@$(call brew-install,$(LUA_TEAL_FORMULA))
+${LUAROCKS_INSTALLED}: $(LUA_TEAL_BIN) Makefile
+${LUAROCKS_INSTALLED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --porcelain --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE)) > $@
+${LUAROCKS_OUTDATED}: $(LUA_TEAL_BIN) Makefile
+${LUAROCKS_OUTDATED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --outdated --porcelain --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE)) > $@
 define luarocks-install
 	@if grep -Fqw $1 $(LUAROCKS_INSTALLED) 2>/dev/null; then\
 	  if grep -Fqw $1 $(LUAROCKS_OUTDATED) 2>/dev/null; then\
 	    printf "$(luarocks_t) Upgrading %s...\n" "$1";\
-	    $(luarocks) upgrade $1;\
+	    $(luarocks) upgrade $1 --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE);\
 	    touch $(LUAROCKS_DIRTY);\
 	  else\
 	    printf "$(luarocks_t) %s...$(call good,GOOD)\n" "$1";\
 	  fi;\
 	else\
 	  printf "$(luarocks_t) Installing %s...\n" "$1";\
-	  $(luarocks) install $1;\
+	  $(luarocks) install $1 --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE);\
 	  touch $(LUAROCKS_DIRTY);\
 	fi
 endef
@@ -163,6 +194,7 @@ dependencies: caches installed outdated
 	@$(call brew-install,neovim)
 	@$(call brew-install,neovim-remote)
 	@$(call brew-cask-install,homebrew/cask-fonts,font-jetbrains-mono-nerd-font)
+	@$(call brew-cask-install,homebrew/cask-fonts,font-0xproto-nerd-font)
 	@#= CLI
 	@$(call brew-install,fd)
 	@$(call brew-install,rsync)
@@ -178,6 +210,7 @@ dependencies: caches installed outdated
 	@$(call brew-install,llvm)
 	@#= Lua & Teal
 	@$(call brew-install,luarocks)
+	@$(call brew-install,$(LUA_TEAL_FORMULA))
 	@$(call luarocks-install,tl)
 	@$(call luarocks-install,cyan)
 	@$(call brew-install,lua-language-server)     #+ Lua LSP
@@ -206,7 +239,7 @@ build: pre-validate
 	@#rsync -ai --prune-empty-dirs --info=NAME0 --include "*/" --include="*.lua" --exclude="*" src/lua/ build/lua/
 .PHONY: build
 
-iTerm2.regex:; @jq -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
+iTerm2.regex:; @$(jq) -r '.Profiles[0]."Smart Selection Rules"[0].regex' "$(ITERM2_DYN_PROF)"
 iTerm2:
 	@echo -e "[$(call green,$@)]"
 	@libexec/iTerm2-integ.py
@@ -232,9 +265,10 @@ install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
 
 $(RAKHSH_CONFIG): build
 	@#rsync -ai --info=NAME0 --delete $</ $@/
-	@rsync -a --info=NAME0 --delete $</ $@/
+	@$(rsync) -a --info=NAME0 --delete $</ $@/
 	@mv $@/lua/init.lua $@/
 	@mv $@/lua/after $@/
+	@mkdir -p ~/bin
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
 
 sync: $(RAKHSH_CONFIG) link splash

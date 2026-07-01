@@ -6,7 +6,7 @@ import os
 # Fixed GUID so we can safely find/update the same profile every time.
 PROFILE_GUID = "8B6A6C58-7E18-4A32-B4C1-5F8A3A9E7F01"
 PROFILE_NAME = "Rakhsh"
-NERD_FONT = "0xProtoNFP-Regular 20"
+NERD_FONT = "0xProtoNF-Regular 20"
 
 def regex() -> str:
     #@ https://regex101.com/r/NSIXLe/1
