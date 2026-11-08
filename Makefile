@@ -27,6 +27,12 @@ luarocks_t = $(shell echo   "[$(CYAN)LuaRocks$(ENDC)]")
 brew_t     = $(shell echo "[$(YELLOW)HomeBrew$(ENDC)]")
 npm_t      = $(shell echo  "[$(GREEN)NdPkgMgr$(ENDC)]")
 
+#= brew prompts "Do you want to proceed with the installation? [y/n]"
+#= before installing/upgrading anything with its own dependencies. Fine
+#= interactively, but it hangs a `make` run non-interactively (e.g. CI,
+#= or this script piped/backgrounded). Ask mode has no non-interactive
+#= fallback, so disable it outright rather than papering over the hang.
+export HOMEBREW_NO_ASK := 1
 export NVIM_APPNAME=rakhsh
 nvim := NVIM_APPNAME=rakhsh $(shell command -v nvim)
 
@@ -45,6 +51,13 @@ LUA_TEAL_VERSION := 5.4
 LUA_TEAL_FORMULA := lua@$(LUA_TEAL_VERSION)
 LUA_TEAL_PREFIX  := $(HOMEBREW_PREFIX)/opt/$(LUA_TEAL_FORMULA)
 LUA_TEAL_BIN     := $(LUA_TEAL_PREFIX)/bin/lua$(LUA_TEAL_VERSION)
+#= luarocks itself is installed by this Makefile (see $(LUAROCKS_BIN)
+#= below), so `command -v luarocks` can't be resolved once at parse
+#= time the way $(brew) is: on a fresh machine that runs before luarocks
+#= exists and freezes `luarocks` to an empty string for the whole
+#= invocation, silently corrupting every recipe that uses it. Hardcode
+#= the path it's always installed to instead, same as jq/rsync below.
+LUAROCKS_BIN     := $(HOMEBREW_PREFIX)/bin/luarocks
 #= Without an explicit --tree, luarocks deploys rocks under whatever
 #= --lua-dir prefix it's given (i.e. under lua@5.4's own keg) instead of
 #= the shared system tree everything else lives in, so tl/cyan would
@@ -62,7 +75,7 @@ RAKHSH_SPLASH := $(RAKHSH_DATA)/splash.txt
 RAKHSH_ZSHRC  := $(HOME)/.zshrc.d/rakhsh.zsh
 
 brew     := $(shell command -v brew || exit 2)
-luarocks := $(shell command -v luarocks || exit 1)
+luarocks := $(LUAROCKS_BIN)
 npm      := $(shell command -v npm || exit 1)
 #= macOS ships an ancient rsync (2.6.9, no --info/--prune-empty-dirs) at
 #= /usr/bin/rsync, earlier in PATH than HomeBrew's, so it silently shadows
@@ -74,10 +87,7 @@ rsync    := $(HOMEBREW_PREFIX)/bin/rsync
 #= Recent macOS also bundles its own (older) jq at /usr/bin/jq, shadowing
 #= HomeBrew's, same as rsync above.
 jq       := $(HOMEBREW_PREFIX)/bin/jq
-teal     := $(shell command -v tl)
 tlchk    := $(shell command -v libexec/tlchk)
-find     := $(shell command -v find)
-rakhsh   := $(shell command -v $(PWD)/bin/rx)
 
 BREW_DIRTY     := $(call cache,BREW_DIRTY)
 BREW_INSTALLED := $(call cache,BREW_INSTALLED)
@@ -127,9 +137,11 @@ LUAROCKS_INSTALLED := $(call cache,LUAROCKS_INSTALLED)
 LUAROCKS_OUTDATED  := $(call cache,LUAROCKS_OUTDATED)
 $(LUA_TEAL_BIN):
 	@$(call brew-install,$(LUA_TEAL_FORMULA))
-${LUAROCKS_INSTALLED}: $(LUA_TEAL_BIN) Makefile
+$(LUAROCKS_BIN):
+	@$(call brew-install,luarocks)
+${LUAROCKS_INSTALLED}: $(LUA_TEAL_BIN) $(LUAROCKS_BIN) Makefile
 ${LUAROCKS_INSTALLED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --porcelain --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE)) > $@
-${LUAROCKS_OUTDATED}: $(LUA_TEAL_BIN) Makefile
+${LUAROCKS_OUTDATED}: $(LUA_TEAL_BIN) $(LUAROCKS_BIN) Makefile
 ${LUAROCKS_OUTDATED}:; @printf "%s %s %s %s\n" $(shell $(luarocks) list --outdated --porcelain --lua-dir=$(LUA_TEAL_PREFIX) --tree=$(LUA_ROCKS_TREE)) > $@
 define luarocks-install
 	@if grep -Fqw $1 $(LUAROCKS_INSTALLED) 2>/dev/null; then\
@@ -209,8 +221,11 @@ dependencies: caches installed outdated
 	@#= C++
 	@$(call brew-install,llvm)
 	@#= Lua & Teal
-	@$(call brew-install,luarocks)
-	@$(call brew-install,$(LUA_TEAL_FORMULA))
+	@#= luarocks and its pinned lua@X.Y toolchain are installed by the
+	@#= LUAROCKS_BIN/LUA_TEAL_BIN file rules above (prerequisites of
+	@#= LUAROCKS_INSTALLED/OUTDATED), not here -- doing it again here too
+	@#= raced the package-list cache and made brew report a bogus "install"
+	@#= on every run of an already-installed formula.
 	@$(call luarocks-install,tl)
 	@$(call luarocks-install,cyan)
 	@$(call brew-install,lua-language-server)     #+ Lua LSP
@@ -258,7 +273,7 @@ splash:
 
 $(RAKHSH_LAZY):
 	@bin/rx
-	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to `Rakhsh`"
+	@echo -e "[$(call green,$@)] Don't forget to set your iTerm2 profile to 'Rakhsh'"
 install: $(RAKHSH_CONFIG) build iTerm2 $(RAKHSH_LAZY) link splash
 	@echo -e "[$(call green,$@)] Install complete"
 .PHONY: install
@@ -271,7 +286,12 @@ $(RAKHSH_CONFIG): build
 	@mkdir -p ~/bin
 	@ln -sf $(PWD)/bin/rx ~/bin/rx
 
-sync: $(RAKHSH_CONFIG) link splash
+#= splash writes into $(RAKHSH_DATA), which nvim/lazy.nvim only create
+#= on first launch -- $(RAKHSH_LAZY) is what triggers that launch (via
+#= bin/rx). Without it here, `make` on a never-installed machine (sync
+#= is .DEFAULT_GOAL, so that's what bare `make` runs) fails with a raw
+#= "No such file or directory" from splash instead of bootstrapping.
+sync: $(RAKHSH_CONFIG) $(RAKHSH_LAZY) link splash
 	@echo -e "[$(call green,$@)]"
 .PHONY: sync
 
